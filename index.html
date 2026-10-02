@@ -795,7 +795,7 @@ function applyInsideFit(mode){const z=ZONES.inside;z.fit=mode;z.rot=0;z.h=0;
 function updateUV(key){
   scheduleCommit();
   const z=ZONES[key];if(!z.aspect)return;
-  const W=z.size*(z.sizeScale||1),Hh=(key==='under'&&z.fit==='shape')?W*FD/FW:W/z.aspect,r=-z.rot*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
+  const W=z.size,Hh=(key==='under'&&z.fit==='shape')?z.size*FD/FW:z.size/z.aspect,r=-z.rot*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
   for(const {d,side} of DECALS[key]){
     const p=d.base,uv=d.mesh.geometry.attributes.uv;
     for(let i=0;i<uv.count;i++){
@@ -882,8 +882,8 @@ function makeSamples(){
    SAMPLES.inside=c;}
 }
 function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
-function buildArt(key,part='all'){
-  const z=ZONES[key];let src=null;const B=part!=='art',Ar=part!=='back';
+function buildArt(key){
+  const z=ZONES[key];let src=null;
   if(z.source==='sample')src=SAMPLES[key];
   else if(z.source==='image')src=z.image;
   else if(z.source==='text'&&z.text.trim())src=textCanvas(z.text,z.font,z.textColor);
@@ -896,94 +896,26 @@ function buildArt(key,part='all'){
     g.drawImage(src,(c.width-dw)/2,(c.height-dh)/2,dw,dh);g.restore();};
   if(z.backing==='tag'){ // woven/rubber tag: a tidy rectangle with a stitched edge
     const pad=Math.round(Math.max(w,h)*0.18);c.width=w+2*pad+2*P;c.height=h+2*pad+2*P;g=c.getContext('2d');
-    const r=Math.min(c.width,c.height)*0.08;
-    if(B){roundRect(g,P,P,c.width-2*P,c.height-2*P,r);g.fillStyle=z.backingColor;g.fill();
+    const r=Math.min(c.width,c.height)*0.08;roundRect(g,P,P,c.width-2*P,c.height-2*P,r);g.fillStyle=z.backingColor;g.fill();
     const lw=Math.max(2,pad*0.1),inset=pad*0.32;g.setLineDash([lw*3,lw*2]);g.lineWidth=lw;g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.3:-0.28);
-    roundRect(g,P+inset,P+inset,c.width-2*P-2*inset,c.height-2*P-2*inset,r*0.6);g.stroke();g.setLineDash([]);}
-    if(Ar)drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,r));
+    roundRect(g,P+inset,P+inset,c.width-2*P-2*inset,c.height-2*P-2*inset,r*0.6);g.stroke();g.setLineDash([]);
+    drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,r));
   }else if(z.backing==='patch'){
     const pad=Math.round(Math.max(w,h)*0.16);c.width=w+2*pad+2*P;c.height=h+2*pad+2*P;g=c.getContext('2d');
-    if(B){roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8);g.fillStyle=z.backingColor;g.fill();
+    roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8);g.fillStyle=z.backingColor;g.fill();
     g.lineWidth=Math.max(3,pad*0.14);g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.25:-0.22);
-    roundRect(g,P+g.lineWidth/2+2,P+g.lineWidth/2+2,c.width-2*P-g.lineWidth-4,c.height-2*P-g.lineWidth-4,pad*0.7);g.stroke();}
-    if(Ar)drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8));
+    roundRect(g,P+g.lineWidth/2+2,P+g.lineWidth/2+2,c.width-2*P-g.lineWidth-4,c.height-2*P-g.lineWidth-4,pad*0.7);g.stroke();
+    drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8));
   }else if(z.backing==='circle'){
     const d=Math.round(Math.hypot(w,h)*1.12);c.width=c.height=d+2*P;g=c.getContext('2d');
-    if(B){g.fillStyle=z.backingColor;g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);g.fill();
+    g.fillStyle=z.backingColor;g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);g.fill();
     g.lineWidth=Math.max(3,d*0.02);g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.25:-0.22);
-    g.beginPath();g.arc(c.width/2,c.height/2,d/2-g.lineWidth*2,0,TAU);g.stroke();}
-    if(Ar)drawArt(()=>{g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);});
+    g.beginPath();g.arc(c.width/2,c.height/2,d/2-g.lineWidth*2,0,TAU);g.stroke();
+    drawArt(()=>{g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);});
   }else{
-    c.width=w+2*P;c.height=h+2*P;g=c.getContext('2d');if(Ar)g.drawImage(src,P,P,w,h);
+    c.width=w+2*P;c.height=h+2*P;g=c.getContext('2d');g.drawImage(src,P,P,w,h);
   }
   return c;
-}
-/* ---- decoration styles: print, embroidery, puff, rubber, leather ----
-   Each style returns a color image plus a height (bump) image that gives it raised or etched relief. */
-const STYLE_INFO={
-  print:{label:'Print',note:'Flat, full-color print on the fabric.',rough:0.8,bump:0},
-  embroidery:{label:'Embroidery',note:'Stitched thread with a slight raised, satin texture.',rough:0.55,bump:0.28},
-  puff:{label:'Puff',note:'Raised foam embroidery that stands up off the hat.',rough:0.5,bump:0.9},
-  rubber:{label:'Rubber',note:'Molded PVC rubber with a soft sheen and raised edges.',rough:0.32,bump:0.6},
-  leather:{label:'Leather',note:'Leather patch with the artwork laser-etched into it. The backing color sets the leather tone.',rough:0.72,bump:0.55}
-};
-function newCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
-function silhouette(cv,fill,alpha=1){const o=newCanvas(cv.width,cv.height),g=o.getContext('2d');g.drawImage(cv,0,0);g.globalCompositeOperation='source-in';g.globalAlpha=alpha;g.fillStyle=fill;g.fillRect(0,0,o.width,o.height);return o;}
-function softBlur(cv,r){ // cheap, portable blur: shrink then enlarge with smoothing
-  if(r<=1)return cv;const k=Math.max(1,r),sw=Math.max(1,Math.round(cv.width/k)),sh=Math.max(1,Math.round(cv.height/k));
-  const a=newCanvas(sw,sh),ga=a.getContext('2d');ga.imageSmoothingQuality='high';ga.drawImage(cv,0,0,sw,sh);
-  const o=newCanvas(cv.width,cv.height),go=o.getContext('2d');go.imageSmoothingQuality='high';go.drawImage(a,0,0,cv.width,cv.height);return o;}
-function stitchLines(cv,pitch,angle,color,width){ // diagonal thread lines drawn only on the artwork
-  const g=cv.getContext('2d');g.save();g.globalCompositeOperation='source-atop';g.strokeStyle=color;g.lineWidth=width;
-  g.translate(cv.width/2,cv.height/2);g.rotate(angle);const R=Math.hypot(cv.width,cv.height);
-  for(let x=-R;x<R;x+=pitch){g.beginPath();g.moveTo(x,-R);g.lineTo(x,R);g.stroke();}g.restore();}
-function buildStyled(key){
-  const z=ZONES[key],style=z.style||'print',all=buildArt(key);
-  if(!all)return null;
-  if(style==='print')return{color:all,bump:null,scale:1};
-  const M=Math.max(all.width,all.height),pad=Math.round(M*0.045),W=all.width+2*pad,H=all.height+2*pad;
-  const place=cv=>{const o=newCanvas(W,H);o.getContext('2d').drawImage(cv,pad,pad);return o;};
-  const hasBack=z.backing!=='none';
-  const allP=place(all),artP=hasBack?place(buildArt(key,'art')):allP,backP=hasBack?place(buildArt(key,'back')):null;
-  const color=newCanvas(W,H),gc=color.getContext('2d'),bump=newCanvas(W,H),gb=bump.getContext('2d');
-  gb.fillStyle='#000';gb.fillRect(0,0,W,H);
-  const px=M/400; // scale for line widths etc.
-  const shadow=(cv,off,blur,a)=>{const sh=softBlur(silhouette(cv,'#000',a),blur);gc.save();gc.globalCompositeOperation='destination-over';gc.drawImage(sh,off*0.6,off);gc.restore();};
-  if(style==='embroidery'||style==='puff'){
-    gc.drawImage(allP,0,0);
-    const pitch=Math.max(3,(style==='puff'?7:5)*px);
-    stitchLines(color,pitch,Math.PI/4,'rgba(0,0,0,0.22)',pitch*0.32);
-    stitchLines(color,pitch,Math.PI/4,'rgba(255,255,255,0.10)',pitch*0.18);
-    // height: puff is a soft dome, flat embroidery is a low plateau; both carry thread ridges
-    const base=style==='puff'?softBlur(silhouette(allP,'#fff'),Math.max(2,8*px)):softBlur(silhouette(allP,'#fff',0.75),Math.max(1,1.5*px));
-    gb.drawImage(base,0,0);
-    const ridges=silhouette(allP,'#fff',style==='puff'?0.15:0.3);stitchLines(ridges,pitch,Math.PI/4,'#000',pitch*0.35);
-    gb.globalCompositeOperation='multiply';gb.drawImage(ridges,0,0);gb.globalCompositeOperation='source-over';
-    shadow(allP,(style==='puff'?6:2)*px,Math.max(1,(style==='puff'?7:2)*px),style==='puff'?0.45:0.25);
-  }else if(style==='rubber'){
-    gc.drawImage(allP,0,0);
-    const hl=gc.createLinearGradient(0,0,0,H);hl.addColorStop(0,'rgba(255,255,255,0.16)');hl.addColorStop(0.5,'rgba(255,255,255,0)');
-    gc.save();gc.globalCompositeOperation='source-atop';gc.fillStyle=hl;gc.fillRect(0,0,W,H);gc.restore();
-    if(hasBack){gb.drawImage(softBlur(silhouette(backP,'#fff',0.55),Math.max(1,4*px)),0,0);gb.drawImage(softBlur(silhouette(artP,'#fff'),Math.max(1,2*px)),0,0);}
-    else gb.drawImage(softBlur(silhouette(allP,'#fff'),Math.max(1,4*px)),0,0);
-    shadow(allP,3*px,Math.max(1,3*px),0.35);
-  }else if(style==='leather'){
-    const shape=backP||allP,leather=z.backingColor;
-    gc.drawImage(silhouette(shape,leather),0,0);
-    // grain and darker, burnished edges
-    gc.save();gc.globalCompositeOperation='source-atop';
-    for(let i=0;i<W*H/120;i++){const x=Math.random()*W,y=Math.random()*H,r=(0.6+Math.random()*1.6)*px;
-      gc.fillStyle=Math.random()<0.6?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.05)';gc.beginPath();gc.ellipse(x,y,r*1.6,r,Math.random()*3,0,TAU);gc.fill();}
-    const edge=softBlur(silhouette(shape,'#fff'),Math.max(2,10*px));const inv=newCanvas(W,H),gi=inv.getContext('2d');
-    gi.fillStyle='rgba(0,0,0,0.35)';gi.fillRect(0,0,W,H);gi.globalCompositeOperation='destination-out';gi.drawImage(edge,0,0);
-    gc.drawImage(inv,0,0);gc.restore();
-    // artwork laser-etched: a burnt, darker tone of the leather, sunk into the surface
-    if(backP){gc.save();gc.globalCompositeOperation='source-atop';gc.drawImage(silhouette(artP,shade(leather,-0.55),0.9),0,0);gc.restore();}
-    gb.drawImage(softBlur(silhouette(shape,'#fff'),Math.max(1,4*px)),0,0);
-    if(backP)gb.drawImage(silhouette(artP,'#5a5a5a'),0,0);
-    shadow(shape,3*px,Math.max(1,3*px),0.3);
-  }
-  return{color,bump,scale:W/all.width};
 }
 /* ---- underbrim fitting ---- */
 const FIT_NOTES={shape:'Stretches the artwork’s outline to the brim’s outline. Use this for art drawn on the brim template.',
@@ -1074,16 +1006,13 @@ function brimTemplate(){
 
 function refreshArt(key){
   scheduleCommit();if(key==='front')resetMatch();
-  const z=ZONES[key],styled=buildStyled(key),art=styled&&styled.color;
+  const z=ZONES[key],art=buildArt(key);
   if(z.tex){z.tex.dispose();z.tex=null;}
-  if(z.bumpTex){z.bumpTex.dispose();z.bumpTex=null;}
-  for(const {d} of DECALS[key]){d.mesh.material.map=null;d.mesh.material.bumpMap=null;}
+  for(const {d} of DECALS[key]){d.mesh.material.map=null;}
   if(art){
     const t=new THREE.CanvasTexture(art);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAniso;t.minFilter=THREE.LinearMipmapLinearFilter;
-    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;z.sizeScale=styled.scale;
-    let bt=null;if(styled.bump){bt=new THREE.CanvasTexture(styled.bump);bt.anisotropy=maxAniso;bt.wrapS=bt.wrapT=THREE.ClampToEdgeWrapping;z.bumpTex=bt;}
-    const info=STYLE_INFO[z.style||'print'];
-    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=info.bump;m.roughness=info.rough;m.needsUpdate=true;}
+    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;
+    for(const {d} of DECALS[key]){d.mesh.material.map=t;d.mesh.material.needsUpdate=true;}
     if(key==='under'&&z.autoFit){applyFit(z.fit);z.autoFit=false;syncZoneUI('under');}
     if(key==='inside'&&z.autoFit){applyInsideFit(z.fit);z.autoFit=false;syncZoneUI('inside');}
     updateUV(key);
@@ -1170,7 +1099,7 @@ const SUB_LABELS={left:'Left side',right:'Right side',back:'Back art',backTag:'B
 const subCur={side:'left',back:'back',inside:'inside'};
 const groupOf=k=>Object.keys(SUBS).find(g=>SUBS[g].includes(k));
 for(const key of['inTag','inside','under','backTag','back','right','left','front']){
-  const z=ZONES[key];if(z.fill===undefined)z.fill=null;if(!z.style)z.style='print';const s=document.createElement('section');s.className='panel';s.dataset.panel=key;
+  const z=ZONES[key];if(z.fill===undefined)z.fill=null;const s=document.createElement('section');s.className='panel';s.dataset.panel=key;
   s.innerHTML=`<h2>${z.title}</h2><p class="lede">${z.lede}</p>
   <div class="group"><span class="label">Artwork</span>
     <div class="upload"><button class="btn primary" data-act="upload">Upload image</button><button class="btn" data-act="sample">Use sample</button><button class="btn quiet" data-act="clear">Remove</button>
@@ -1201,8 +1130,6 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
     <p class="fitnote" id="inside-fitnote"></p></div>`:''}
   ${groupOf(key)?`<div class="group"><span class="label">Editing</span><div class="inline"><div class="seg">${SUBS[groupOf(key)].map(k=>`<button data-sub="${k}" aria-pressed="${k===key}">${SUB_LABELS[k]}</button>`).join('')}</div>
     ${key==='left'||key==='right'?`<button class="btn quiet" data-act="copyside">Copy to ${key==='left'?'right':'left'} side</button>`:''}</div></div>`:''}
-  <div class="group"><span class="label">Decoration</span><div class="seg" id="${key}-style">${Object.entries(STYLE_INFO).map(([k,v])=>`<button data-v="${k}">${v.label}</button>`).join('')}</div>
-    <p class="fitnote" id="${key}-stylenote"></p></div>
   <div class="group"><span class="label">Backing</span><div class="inline"><div class="seg" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">None</button><button data-v="patch">Patch</button><button data-v="circle">Circle</button></div>
     <input type="color" id="${key}-bcolor" aria-label="Backing color"></div>
     <div class="slider" id="${key}-fillwrap"><label for="${key}-fill">Artwork fill</label><output id="${key}-fill-out"></output>
@@ -1220,7 +1147,6 @@ function fmt(prop,val){return prop==='rot'?`${Math.round(val)}°`:`${(+val).toFi
 function syncZoneUI(key){
   const z=ZONES[key];
   for(const p of['size','h','v','rot']){const i=$(`#${key}-${p}`);i.value=z[p];$(`#${key}-${p}-out`).textContent=fmt(p,z[p]);}
-  $$(`#${key}-style button`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.style)));$(`#${key}-stylenote`).textContent=STYLE_INFO[z.style].note;
   {const FD={tag:1/1.36,patch:1/1.32,circle:1/1.12},f=z.fill||FD[z.backing]||0.76,fi=$(`#${key}-fill`);
    $(`#${key}-fillwrap`).hidden=z.backing==='none';fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
   $(`#${key}-text`).value=z.text;$(`#${key}-font`).value=z.font;$(`#${key}-tcolor`).value=z.textColor;$(`#${key}-bcolor`).value=z.backingColor;
@@ -1246,15 +1172,12 @@ panels.addEventListener('click',e=>{
   else if(act==='center'){if(key==='under')applyFit(z.fit);else if(key==='inside')applyInsideFit(z.fit);else Object.assign(z,z.defaults);syncZoneUI(key);updateUV(key);}
   else if(b.parentElement.id==='under-fit'){applyFit(b.dataset.v);syncZoneUI(key);updateUV(key);}
   else if(b.parentElement.id==='inside-fit'){applyInsideFit(b.dataset.v);syncZoneUI(key);updateUV(key);}
-  else if(b.parentElement.id===`${key}-style`){z.style=b.dataset.v;
-    if(z.style==='leather'){if(z.backing==='none')z.backing=z.tag?'tag':'patch';if(lum(z.backingColor)>0.7)z.backingColor='#9A6A43';}
-    syncZoneUI(key);refreshArt(key);}
   else if(b.parentElement.id===`${key}-backing`){z.backing=b.dataset.v;syncZoneUI(key);refreshArt(key);}
   else if(act==='matchcrown'){colors.lining=colors.tape=colors.sweat=null;applyColors();syncColorUI();}
   else if(b.parentElement.id==='inside-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('inside');dirty=true;stopSpin();goView(z.which==='front'?'insideFront':'inside');}
   else if(b.dataset.sub){selectTab(b.dataset.sub,true,true);}
   else if(act==='copyside'){const other=key==='left'?'right':'left',o=ZONES[other];
-    ['size','h','v','rot','fill','style','backing','backingColor','source','image','imageName','text','font','textColor'].forEach(f=>o[f]=z[f]);
+    ['size','h','v','rot','fill','backing','backingColor','source','image','imageName','text','font','textColor'].forEach(f=>o[f]=z[f]);
     refreshArt(other);syncZoneUI(other);toast('Copied to the '+other+' side');}
   else if(b.parentElement.id==='side-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('side');dirty=true;stopSpin();goView(z.which==='right'?'right':z.which==='both'?'quarter':'left');}
 });
@@ -1477,7 +1400,7 @@ async function saveBlob(blob,filename){
 
 /* ---------- saved designs ---------- */
 const ZONE_KEYS=['front','left','right','back','backTag','under','inside','inTag'];
-const ZONE_FIELDS=['size','h','v','rot','fill','style','backing','backingColor','source','text','font','textColor','which','fit','note','imageName'];
+const ZONE_FIELDS=['size','h','v','rot','fill','backing','backingColor','source','text','font','textColor','which','fit','note','imageName'];
 function imageToDataURL(img){
   if(!img)return null;const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;
   const sc=Math.min(1,2000/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);

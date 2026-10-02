@@ -50,6 +50,7 @@ body{height:100%;margin:0;background:var(--panel);color:var(--ink);
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.quiet{background:transparent}
+.btn:disabled{opacity:.4;cursor:default}
 .btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .designs-dlg{border:1px solid var(--rule);border-radius:16px;padding:0;background:var(--panel);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:min(80vh,720px)}
@@ -110,6 +111,10 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 .check input{width:17px;height:17px;accent-color:var(--accent)}
 .status{font-size:12.5px;color:var(--muted);margin-top:8px}
 
+/* shared 3D viewer: just the hat */
+body.viewer .app{grid-template-columns:1fr;grid-template-rows:1fr;height:100%}
+body.viewer .rail,body.viewer #designsBtn,body.viewer #shareBtn,body.viewer #undoBtn,body.viewer #redoBtn{display:none}
+body.viewer .stage{height:100%}
 @media (max-width:860px){
   .app{grid-template-columns:1fr;grid-template-rows:56vh auto;height:auto;min-height:100%}
   html,body{height:auto}
@@ -127,11 +132,13 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 <div class="app">
   <main class="stage" id="stage">
     <canvas id="gl" tabindex="0" aria-label="3D hat preview. Drag or use arrow keys to rotate; scroll, pinch, or plus and minus to zoom."></canvas>
-    <div class="brand"><h1>Cap studio</h1><p>Drag to rotate, scroll or pinch to zoom</p></div>
+    <div class="brand"><h1 id="brandTitle">Cap studio</h1><p id="brandSub">Drag to rotate, scroll or pinch to zoom</p></div>
     <div class="tools">
+      <button class="btn quiet" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ <span class="lbl">Undo</span></button>
+      <button class="btn quiet" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ <span class="lbl">Redo</span></button>
       <button class="btn quiet" id="spinBtn" aria-pressed="false" title="Spin the hat">↻ <span class="lbl">Spin</span></button>
       <button class="btn" id="designsBtn">Designs</button>
-      <button class="btn primary" id="saveBtn">Save PNG</button>
+      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
       <button data-view="front">Front</button>
@@ -148,7 +155,7 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
   <aside class="rail">
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="front" aria-selected="true">Front</button>
-      <button role="tab" data-tab="side" aria-selected="false">Side</button>
+      <button role="tab" data-tab="side" aria-selected="false">Sides</button>
       <button role="tab" data-tab="back" aria-selected="false">Back</button>
       <button role="tab" data-tab="under" aria-selected="false">Underbrim</button>
       <button role="tab" data-tab="inside" aria-selected="false">Inside</button>
@@ -208,6 +215,8 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 (function(){
 "use strict";
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const SHARED=window.__CAP_DESIGN__||null;
+if(SHARED)document.body.classList.add('viewer');
 const TAU=Math.PI*2;
 
 /* ---------- color helpers ---------- */
@@ -237,19 +246,22 @@ let perforated=true;
 
 const ZONES={
   front:{title:'Front art',lede:'The main logo, centered on the front panel.',
-    size:6.5,h:0,v:4.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:'sample',image:null,text:'',font:'sans',textColor:'#1F2225',
+    size:6.5,h:0,v:4.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#1F2225',
     ranges:{size:[2,11],h:[-6,6],v:[1,9]},labels:{h:'Left to right',v:'Up and down'},view:'front'},
-  side:{title:'Side art',lede:'A small patch or mark on the side panel.',
-    size:3.2,h:-0.15,v:2.1,rot:0,backing:'patch',backingColor:'#F4F4F2',source:'sample',image:null,text:'',font:'script',textColor:'#1F2225',which:'left',
+  left:{title:'Left side',lede:'A patch or mark on the wearer’s left side panel. Each side has its own art and placement.',
+    size:3.2,h:-0.15,v:2.1,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'script',textColor:'#1F2225',
     ranges:{size:[1.5,8],h:[-6,8],v:[0.6,8]},labels:{h:'Front to back',v:'Up and down'},view:'left'},
+  right:{title:'Right side',lede:'A patch or mark on the wearer’s right side panel. Each side has its own art and placement.',
+    size:3.2,h:-0.15,v:2.1,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'script',textColor:'#1F2225',
+    ranges:{size:[1.5,8],h:[-6,8],v:[0.6,8]},labels:{h:'Front to back',v:'Up and down'},view:'right'},
   back:{title:'Back',lede:'Art on the back panels above the snap closure, plus the closure colors.',
-    size:4,h:0,v:6.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:'sample',image:null,text:'',font:'sans',textColor:'#1F2225',
+    size:4,h:0,v:6.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#1F2225',
     ranges:{size:[1.5,12],h:[-6,6],v:[1,8.8]},labels:{h:'Left to right',v:'Up and down'},view:'back'},
   inside:{title:'Inside',lede:'Colors for the lining, seam tape and sweatband, and a print that fills the inside of the two front panels, above the brim.',
-    size:20,h:0,v:7,rot:0,backing:'none',backingColor:'#F4F4F2',source:'sample',image:null,text:'',font:'serif',textColor:'#1F2225',which:'front',fit:'fill',autoFit:true,
+    size:20,h:0,v:7,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'serif',textColor:'#1F2225',which:'front',fit:'fill',autoFit:true,
     ranges:{size:[1.5,40],h:[-10,10],v:[0,16]},labels:{h:'Left to right',v:'Up from the brim'},view:'insideFront'},
   under:{title:'Underbrim art',lede:'A print on the underside of the bill, oriented so the wearer reads it. Uploads are lined up to the brim automatically.',
-    size:20,h:0,v:0,rot:0,backing:'none',backingColor:'#F4F4F2',source:'sample',image:null,text:'',font:'sans',textColor:'#F4F4F2',
+    size:20,h:0,v:0,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#F4F4F2',
     fit:'fill',autoFit:true,note:'',
     ranges:{size:[3,40],h:[-9,9],v:[-6,6]},labels:{h:'Left to right',v:'Toward the front edge'},view:'under'}
 };
@@ -680,7 +692,8 @@ const IN_NT=260,IN_NA=60;
 const inFrontGeo=gridGeometry(-SEAM_TH[0],SEAM_TH[0],IN_NT,IN_NA,0.985,0);offsetAlongNormals(inFrontGeo,-0.05);
 const DECALS={
   front:[{d:decalMesh(frontGeo,THREE.FrontSide),side:'front'}],
-  side:[{d:decalMesh(leftGeo,THREE.FrontSide),side:'left'},{d:decalMesh(rightGeo,THREE.FrontSide),side:'right'}],
+  left:[{d:decalMesh(leftGeo,THREE.FrontSide),side:'left'}],
+  right:[{d:decalMesh(rightGeo,THREE.FrontSide),side:'right'}],
   under:[{d:decalMesh(underDecalGeo,THREE.DoubleSide),side:'under'}],
   back:[{d:decalMesh(backGeo,THREE.FrontSide),side:'back'}],
   inside:[{d:decalMesh(inFrontGeo,THREE.BackSide),side:'inFront'}]
@@ -708,6 +721,7 @@ function applyInsideFit(mode){const z=ZONES.inside;z.fit=mode;z.rot=0;z.h=0;
   for(let j=0;j<=NW;j++)for(let i=0;i<=NB;i++,k++){const f=brimFlat(-THB+2*THB*i/NB,j/NW);b[3*k]=f[0];b[3*k+2]=f[1];}})();
 
 function updateUV(key){
+  scheduleCommit();
   const z=ZONES[key];if(!z.aspect)return;
   const W=z.size,Hh=(key==='under'&&z.fit==='shape')?z.size*FD/FW:z.size/z.aspect,r=-z.rot*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
   for(const {d,side} of DECALS[key]){
@@ -732,7 +746,6 @@ function updateVisibility(key){
   const z=ZONES[key],has=!!z.tex;
   for(const {d,side} of DECALS[key]){
     let vis=has;
-    if(key==='side')vis=has&&(z.which==='both'||z.which===side);
     if(key==='inside')vis=has&&((z.which==='front')===(side==='inFront'));
     d.mesh.visible=vis;
   }
@@ -771,7 +784,7 @@ function makeSamples(){
    for(const s of[-1,1]){g.beginPath();g.arc(s*388,0,13,0,TAU);g.fill();}
    g.font='400 400px "Yellowtail", "Brush Script MT", cursive';g.fillText('C',-8,24);
    SAMPLES.front=c;}
-  SAMPLES.side=textCanvas('cc','script','#1F2225');
+  SAMPLES.left=SAMPLES.right=textCanvas('cc','script','#1F2225');
   // underbrim: contour lines
   {const c=document.createElement('canvas');c.width=2000;c.height=800;const g=c.getContext('2d');
    g.strokeStyle='#8E949A';g.lineWidth=3.2;g.lineJoin='round';
@@ -908,6 +921,7 @@ function brimTemplate(){
 }
 
 function refreshArt(key){
+  scheduleCommit();
   const z=ZONES[key],art=buildArt(key);
   if(z.tex){z.tex.dispose();z.tex=null;}
   for(const {d} of DECALS[key]){d.mesh.material.map=null;}
@@ -951,7 +965,7 @@ function applyCamera(){
   camera.position.set(cam.target.x+cam.dist*cp*Math.sin(cam.yaw),cam.target.y+cam.dist*Math.sin(cam.pitch),cam.target.z+cam.dist*cp*Math.cos(cam.yaw));
   camera.lookAt(cam.target);
 }
-$$('.views button').forEach(b=>b.addEventListener('click',()=>{stopSpin();goView(b.dataset.view==='left'&&ZONES.side.which==='right'?'right':b.dataset.view==='inside'&&ZONES.inside.which==='front'?'insideFront':b.dataset.view);}));
+$$('.views button').forEach(b=>b.addEventListener('click',()=>{stopSpin();goView(b.dataset.view==='left'&&activeTab==='right'?'right':b.dataset.view==='inside'&&ZONES.inside.which==='front'?'insideFront':b.dataset.view);}));
 
 /* pointer controls */
 const pointers=new Map();let pinch0=0,dist0=0;
@@ -995,7 +1009,7 @@ function loop(now){
 /* ---------- UI: zone panels ---------- */
 const panels=$('#panels');
 function sliderHTML(key,prop,label,min,max,step){return `<div class="slider"><label for="${key}-${prop}">${label}</label><output id="${key}-${prop}-out"></output><input type="range" id="${key}-${prop}" data-zone="${key}" data-prop="${prop}" min="${min}" max="${max}" step="${step}"></div>`;}
-for(const key of['inside','under','back','side','front']){
+for(const key of['inside','under','back','right','left','front']){
   const z=ZONES[key];const s=document.createElement('section');s.className='panel';s.dataset.panel=key;
   s.innerHTML=`<h2>${z.title}</h2><p class="lede">${z.lede}</p>
   <div class="group"><span class="label">Artwork</span>
@@ -1018,7 +1032,8 @@ for(const key of['inside','under','back','side','front']){
       <button class="btn quiet" data-act="matchcrown" style="margin-top:8px">Match crown color</button></div>
     <div class="group"><span class="label">Fit</span><div class="seg" id="inside-fit"><button data-v="fill">Fill front panels</button><button data-v="free">Free</button></div>
     <p class="fitnote" id="inside-fitnote"></p></div>`:''}
-  ${key==='side'?`<div class="group"><span class="label">Which side</span><div class="seg" id="side-which"><button data-v="left">Left</button><button data-v="right">Right</button><button data-v="both">Both</button></div></div>`:''}
+  ${key==='left'||key==='right'?`<div class="group"><span class="label">Editing</span><div class="inline"><div class="seg side-switch"><button data-side="left" aria-pressed="${key==='left'}">Left side</button><button data-side="right" aria-pressed="${key==='right'}">Right side</button></div>
+    <button class="btn quiet" data-act="copyside">Copy to ${key==='left'?'right':'left'} side</button></div></div>`:''}
   <div class="group"><span class="label">Backing</span><div class="inline"><div class="seg" id="${key}-backing"><button data-v="none">None</button><button data-v="patch">Patch</button><button data-v="circle">Circle</button></div>
     <input type="color" id="${key}-bcolor" aria-label="Backing color"></div></div>
   <div class="group"><span class="label">Placement</span>
@@ -1060,6 +1075,10 @@ panels.addEventListener('click',e=>{
   else if(b.parentElement.id===`${key}-backing`){z.backing=b.dataset.v;syncZoneUI(key);refreshArt(key);}
   else if(act==='matchcrown'){colors.lining=colors.tape=colors.sweat=null;applyColors();syncColorUI();}
   else if(b.parentElement.id==='inside-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('inside');dirty=true;stopSpin();goView(z.which==='front'?'insideFront':'inside');}
+  else if(b.dataset.side){selectTab(b.dataset.side);}
+  else if(act==='copyside'){const other=key==='left'?'right':'left',o=ZONES[other];
+    ['size','h','v','rot','backing','backingColor','source','image','imageName','text','font','textColor'].forEach(f=>o[f]=z[f]);
+    refreshArt(other);syncZoneUI(other);toast('Copied to the '+other+' side');}
   else if(b.parentElement.id==='side-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('side');dirty=true;stopSpin();goView(z.which==='right'?'right':z.which==='both'?'quarter':'left');}
 });
 let textTimer=null;
@@ -1095,20 +1114,23 @@ function loadFile(file,key){
 $('#fileInput').addEventListener('change',e=>{loadFile(e.target.files[0],fileTarget);e.target.value='';});
 let dragDepth=0;
 const dropKey=()=>ZONES[activeTab]?activeTab:'front';
-stage.addEventListener('dragenter',e=>{e.preventDefault();dragDepth++;$('#dropZoneName').textContent={front:'front',side:'side',under:'underbrim',back:'back',inside:'inside'}[dropKey()];stage.classList.add('dragging');});
+stage.addEventListener('dragenter',e=>{e.preventDefault();dragDepth++;$('#dropZoneName').textContent={front:'front',left:'left side',right:'right side',under:'underbrim',back:'back',inside:'inside'}[dropKey()];stage.classList.add('dragging');});
 stage.addEventListener('dragover',e=>e.preventDefault());
 stage.addEventListener('dragleave',()=>{if(--dragDepth<=0){dragDepth=0;stage.classList.remove('dragging');}});
 stage.addEventListener('drop',e=>{e.preventDefault();dragDepth=0;stage.classList.remove('dragging');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadFile(f,dropKey());});
 
 /* tabs */
+let sideKey='left';
 function selectTab(name,moveCam=true){
+  if(name==='side')name=sideKey;
+  if(name==='left'||name==='right')sideKey=name;
   activeTab=name;
-  $$('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));
+  const tabName=(name==='left'||name==='right')?'side':name;
+  $$('.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tabName)));
   $$('.panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===name));
   if(!moveCam)return;
   stopSpin();
   if(name==='colors')goView('quarter');
-  else if(name==='side')goView(ZONES.side.which==='right'?'right':'left');
   else if(name==='inside')goView(ZONES.inside.which==='front'?'insideFront':'inside');
   else goView(ZONES[name].view);
 }
@@ -1123,9 +1145,10 @@ function syncColorUI(){$$('[data-color]').forEach(i=>i.value=eff(i.dataset.color
 let colorRaf=0;
 $$('[data-color]').forEach(i=>i.addEventListener('input',()=>{colors[i.dataset.color]=i.value;cancelAnimationFrame(colorRaf);colorRaf=requestAnimationFrame(()=>{applyColors();syncColorUI();});}));
 $('#toneStitch').addEventListener('click',()=>{colors.stitchCrown=colors.stitchBrim=null;applyColors();syncColorUI();});
-$('#ropeToggle').addEventListener('change',e=>{ropeOn=e.target.checked;rope.visible=ropeOn;dirty=true;});
-$('#perfToggle').addEventListener('change',e=>{perforated=e.target.checked;paintCrown();dirty=true;});
+$('#ropeToggle').addEventListener('change',e=>{ropeOn=e.target.checked;rope.visible=ropeOn;dirty=true;scheduleCommit();});
+$('#perfToggle').addEventListener('change',e=>{perforated=e.target.checked;paintCrown();dirty=true;scheduleCommit();});
 function applyColors(){
+  scheduleCommit();
   paintCrown();paintBrim();
   tapeMat.color.copy(lin(eff('tape')));sweatMat.color.copy(lin(eff('sweat')));
   ropeMat.color.copy(lin(colors.rope));
@@ -1140,14 +1163,55 @@ let toastTimer=0;function toast(msg){const dd=document.getElementById('designsDl
 let downloads=null,hasHost=!!(window.claude&&typeof window.claude.use==='function');
 const saveBtn=$('#saveBtn');
 if(hasHost){saveBtn.disabled=true;const tb=$('#templateBtn');if(tb)tb.disabled=true;window.claude.use('downloads').then(d=>{downloads=d;if(d){saveBtn.disabled=false;if(tb)tb.disabled=false;}else{saveBtn.hidden=true;if(tb)tb.hidden=true;}}).catch(()=>{saveBtn.hidden=true;if(tb)tb.hidden=true;});}
+// Minimal zip writer (stored, no compression) so all angles download in one file
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC_T[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0,true);h.setUint16(8,0,true);h.setUint16(10,0,true);h.setUint16(12,0x21,true);
+    h.setUint32(14,crc,true);h.setUint32(18,sz,true);h.setUint32(22,sz,true);h.setUint16(26,name.length,true);h.setUint16(28,0,true);
+    parts.push(new Uint8Array(h.buffer),name,f.data);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0,true);c.setUint16(10,0,true);c.setUint16(12,0,true);c.setUint16(14,0x21,true);
+    c.setUint32(16,crc,true);c.setUint32(20,sz,true);c.setUint32(24,sz,true);c.setUint16(28,name.length,true);c.setUint32(42,off,true);
+    central.push(new Uint8Array(c.buffer),name);
+    off+=30+name.length+sz;
+  }
+  const csize=central.reduce((n,p)=>n+p.length,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csize,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:'application/zip'});
+}
+const SHOTS=[['01-front','front'],['02-front-left','quarter'],['03-left-side','left'],['04-back','back'],
+  ['05-right-side','right'],['06-front-right','quarterRight'],['07-underbrim','under'],['08-inside','insideFront']];
+VIEWS.quarterRight={yaw:-0.78,pitch:0.2,dist:42,target:[0,3.6,3.5]};
+function dataURLBytes(u){const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
 saveBtn.addEventListener('click',async()=>{
+  saveBtn.disabled=true;const label=saveBtn.textContent;saveBtn.textContent='Rendering…';
+  await new Promise(r=>setTimeout(r,30));
   const transparent=$('#transparentToggle').checked;
+  const keep={yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,target:cam.target.clone()},wasSpin=spinning;
+  stopSpin();tween=null;
+  const size=renderer.getSize(new THREE.Vector2()),pr=renderer.getPixelRatio();
+  const S=1600;renderer.setPixelRatio(1);renderer.setSize(S,S,false);camera.aspect=1;camera.updateProjectionMatrix();
   if(!transparent)scene.background=lin(getComputedStyle(document.documentElement).getPropertyValue('--backdrop').trim()||'#E3E4E6');
-  applyCamera();renderer.render(scene,camera);
-  const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
-  scene.background=null;dirty=true;
-  if(!blob){toast('The image couldn’t be created. Try again.');return;}
-  saveBlob(blob,'cap-mockup.png');
+  const files=[];
+  try{
+    for(const [name,view] of SHOTS){
+      const v=VIEWS[view];cam.yaw=v.yaw;cam.pitch=v.pitch;cam.dist=v.dist;cam.target.set(...v.target);
+      applyCamera();renderer.render(scene,camera);
+      files.push({name:'cap-'+name+'.png',data:dataURLBytes(canvas.toDataURL('image/png'))});
+    }
+  }finally{
+    scene.background=null;renderer.setPixelRatio(pr);renderer.setSize(size.x,size.y,false);camera.aspect=size.x/Math.max(1,size.y);camera.updateProjectionMatrix();
+    cam.yaw=keep.yaw;cam.pitch=keep.pitch;cam.dist=keep.dist;cam.target.copy(keep.target);dirty=true;
+    if(wasSpin){spinning=true;spinBtn.setAttribute('aria-pressed','true');}
+    saveBtn.disabled=false;saveBtn.textContent=label;
+  }
+  if(!files.length){toast('The images couldn’t be created. Try again.');return;}
+  saveBlob(makeZip(files),'cap-mockup-views.zip');
 });
 async function saveBlob(blob,filename){
   if(downloads){
@@ -1164,7 +1228,7 @@ async function saveBlob(blob,filename){
 }
 
 /* ---------- saved designs ---------- */
-const ZONE_KEYS=['front','side','back','under','inside'];
+const ZONE_KEYS=['front','left','right','back','under','inside'];
 const ZONE_FIELDS=['size','h','v','rot','backing','backingColor','source','text','font','textColor','which','fit','note','imageName'];
 function imageToDataURL(img){
   if(!img)return null;const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;
@@ -1179,6 +1243,8 @@ function serializeDesign(){
 }
 async function restoreDesign(d){
   if(!d||!d.zones)throw new Error('bad');
+  if(d.zones.side&&!d.zones.left){const o=d.zones.side,w=o.which||'left',empty={...o,source:null,image:null,text:''};
+    d.zones.left=(w==='left'||w==='both')?o:empty;d.zones.right=(w==='right'||w==='both')?o:empty;}
   Object.assign(colors,d.colors||{});
   perforated=d.perforated!==false;ropeOn=d.ropeOn!==false;
   $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
@@ -1255,15 +1321,62 @@ $('#designFileInput').addEventListener('change',async e=>{
   catch(err){toast('That file isn’t a Cap studio design file.');}
 });
 
+/* ---------- undo / redo ----------
+   Every edit (colors, toggles, art, placement) is captured as a snapshot. Rapid edits such as
+   dragging a slider are merged into one step. Camera moves are not part of the history. */
+var undoReady=false,undoBusy=false,undoTimer=0;
+const UNDO_MAX=80,undoStack=[],redoStack=[];
+const imgIds=new WeakMap();let imgSeq=0;
+const imgId=i=>{if(!i)return 0;if(!imgIds.has(i))imgIds.set(i,++imgSeq);return imgIds.get(i);};
+function takeSnap(){
+  const zones={};
+  for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=z.image;zones[k]=o;}
+  const snap={colors:{...colors},perforated,ropeOn,zones};
+  snap.sig=JSON.stringify(snap,(key,val)=>key==='image'?imgId(val):val);
+  return snap;
+}
+let undoCurrent=null;
+function scheduleCommit(){if(!undoReady||undoBusy)return;clearTimeout(undoTimer);undoTimer=setTimeout(commitSnap,320);}
+function commitSnap(){
+  if(!undoReady||undoBusy)return;const n=takeSnap();
+  if(undoCurrent&&n.sig===undoCurrent.sig)return;
+  if(undoCurrent){undoStack.push(undoCurrent);if(undoStack.length>UNDO_MAX)undoStack.shift();}
+  redoStack.length=0;undoCurrent=n;syncUndoUI();
+}
+function applySnap(sn){
+  undoBusy=true;
+  try{
+    Object.assign(colors,sn.colors);perforated=sn.perforated;ropeOn=sn.ropeOn;
+    $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
+    for(const k of ZONE_KEYS){const z=ZONES[k],o=sn.zones[k];ZONE_FIELDS.forEach(f=>{if(o[f]!==undefined)z[f]=o[f];});z.image=o.image;z.autoFit=false;refreshArt(k);syncZoneUI(k);}
+    applyColors();syncColorUI();dirty=true;
+  }finally{undoBusy=false;}
+}
+function undo(){clearTimeout(undoTimer);commitSnap();if(!undoStack.length)return;redoStack.push(undoCurrent);undoCurrent=undoStack.pop();applySnap(undoCurrent);syncUndoUI();toast('Undone');}
+function redo(){clearTimeout(undoTimer);commitSnap();if(!redoStack.length)return;undoStack.push(undoCurrent);undoCurrent=redoStack.pop();applySnap(undoCurrent);syncUndoUI();toast('Redone');}
+function syncUndoUI(){$('#undoBtn').disabled=!undoStack.length;$('#redoBtn').disabled=!redoStack.length;}
+$('#undoBtn').addEventListener('click',undo);$('#redoBtn').addEventListener('click',redo);
+document.addEventListener('keydown',e=>{
+  if(!(e.ctrlKey||e.metaKey))return;const t=e.target;
+  if(t&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&t.type==='text')))return; // let text fields undo their own typing
+  const k=e.key.toLowerCase();
+  if(k==='z'&&!e.shiftKey){e.preventDefault();undo();}
+  else if((k==='z'&&e.shiftKey)||k==='y'){e.preventDefault();redo();}
+});
+
 /* ---------- boot ---------- */
 syncColorUI();applyColors();
-for(const k of['front','side','back','under','inside'])syncZoneUI(k);
+for(const k of['front','left','right','back','under','inside'])syncZoneUI(k);
 selectTab('front',false);
 resize();
 cam.yaw=VIEWS.quarter.yaw;cam.pitch=VIEWS.quarter.pitch;cam.dist=fitDist(46);
 requestAnimationFrame(loop);
 Promise.race([Promise.all(['sans','script','serif'].map(loadFont)),new Promise(r=>setTimeout(r,2500))]).then(()=>{
-  makeSamples();for(const k of['front','side','back','under','inside'])refreshArt(k);
+  makeSamples();for(const k of['front','left','right','back','under','inside'])refreshArt(k);
+  undoCurrent=takeSnap();undoReady=true;syncUndoUI();
+  if(SHARED){restoreDesign(SHARED.design).catch(()=>{});
+    $('#brandTitle').textContent=SHARED.name||'Cap design';$('#brandSub').textContent='3D preview. Drag to rotate, scroll or pinch to zoom.';
+    document.title=(SHARED.name||'Cap design')+' (3D cap preview)';}
 });
 })();
 </script>

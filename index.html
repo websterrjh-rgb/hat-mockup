@@ -52,6 +52,21 @@ body{height:100%;margin:0;background:var(--panel);color:var(--ink);
 .btn.quiet{background:transparent}
 .btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.designs-dlg{border:1px solid var(--rule);border-radius:16px;padding:0;background:var(--panel);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:min(80vh,720px)}
+.designs-dlg::backdrop{background:rgba(20,22,25,.45)}
+.designs-dlg .dlg-body{padding:20px 22px 22px;display:flex;flex-direction:column;gap:16px;max-height:min(80vh,720px);overflow:auto}
+.designs-dlg h2{margin:0;font-size:21px;font-weight:800;font-stretch:80%}
+.designs-dlg .dlg-head{display:flex;justify-content:space-between;align-items:center}
+.save-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.design-list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.design-item{display:grid;grid-template-columns:84px 1fr auto;gap:12px;align-items:center;border:1px solid var(--rule);border-radius:12px;padding:8px;background:var(--field)}
+.design-item img{width:84px;height:60px;object-fit:cover;border-radius:8px;background:var(--backdrop)}
+.design-item .meta strong{display:block;font-size:14px}
+.design-item .meta span{font-size:12.5px;color:var(--muted)}
+.design-item .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{color:var(--muted);font-size:13.5px;margin:0}
+.dlg-foot{border-top:1px solid var(--rule);padding-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dlg-foot small{flex-basis:100%;color:var(--muted);font-size:12.5px}
 .toast{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:9px;font-size:13.5px;
   opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
@@ -115,6 +130,7 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
     <div class="brand"><h1>Cap studio</h1><p>Drag to rotate, scroll or pinch to zoom</p></div>
     <div class="tools">
       <button class="btn quiet" id="spinBtn" aria-pressed="false" title="Spin the hat">↻ <span class="lbl">Spin</span></button>
+      <button class="btn" id="designsBtn">Designs</button>
       <button class="btn primary" id="saveBtn">Save PNG</button>
     </div>
     <nav class="views" aria-label="Camera views">
@@ -171,6 +187,21 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 </div>
 
 <input type="file" id="fileInput" accept="image/*" hidden>
+<input type="file" id="designFileInput" accept=".json,application/json" hidden>
+<dialog class="designs-dlg" id="designsDlg" aria-labelledby="designsTitle">
+  <div class="dlg-body">
+    <div class="dlg-head"><h2 id="designsTitle">Your designs</h2><button class="btn quiet" id="designsClose">Close</button></div>
+    <div><label class="label" for="designName" style="display:block;font-size:13px;font-weight:650;margin-bottom:8px">Save the current design</label>
+      <div class="save-row"><input type="text" id="designName" placeholder="Design name" autocomplete="off"><button class="btn primary" id="designSave">Save design</button></div></div>
+    <p class="status" id="dlgStatus" role="status" aria-live="polite" style="margin:0"></p>
+    <ul class="design-list" id="designList"></ul>
+    <div class="dlg-foot">
+      <button class="btn" id="designExport">Download design file</button>
+      <button class="btn" id="designImport">Open design file</button>
+      <small>Saved designs stay in this browser on this device. Download a design file to keep a copy, move it to another device, or send it to someone.</small>
+    </div>
+  </div>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1103,7 +1134,7 @@ function applyColors(){
 }
 
 /* toast */
-let toastTimer=0;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+let toastTimer=0;function toast(msg){const dd=document.getElementById('designsDlg');if(dd&&dd.open){document.getElementById('dlgStatus').textContent=msg;return;}const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
 
 /* export */
 let downloads=null,hasHost=!!(window.claude&&typeof window.claude.use==='function');
@@ -1131,6 +1162,98 @@ async function saveBlob(blob,filename){
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Saved '+filename);
   }
 }
+
+/* ---------- saved designs ---------- */
+const ZONE_KEYS=['front','side','back','under','inside'];
+const ZONE_FIELDS=['size','h','v','rot','backing','backingColor','source','text','font','textColor','which','fit','note','imageName'];
+function imageToDataURL(img){
+  if(!img)return null;const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;
+  const sc=Math.min(1,2000/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/png');
+}
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+function serializeDesign(){
+  const zones={};
+  for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=imageToDataURL(z.image);zones[k]=o;}
+  return{colors:{...colors},perforated,ropeOn,zones};
+}
+async function restoreDesign(d){
+  if(!d||!d.zones)throw new Error('bad');
+  Object.assign(colors,d.colors||{});
+  perforated=d.perforated!==false;ropeOn=d.ropeOn!==false;
+  $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
+  for(const k of ZONE_KEYS){const z=ZONES[k],o=d.zones[k];if(!o)continue;
+    ZONE_FIELDS.forEach(f=>{if(o[f]!==undefined)z[f]=o[f];});
+    z.image=o.image?await loadImg(o.image):null;
+    if(z.source==='image'&&!z.image)z.source=null;
+    z.autoFit=false;refreshArt(k);syncZoneUI(k);}
+  applyColors();syncColorUI();dirty=true;
+}
+function designThumb(){
+  applyCamera();renderer.render(scene,camera);const src=canvas,w=320,h=Math.max(1,Math.round(320*src.height/src.width));
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+  g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--backdrop').trim()||'#E3E4E6';g.fillRect(0,0,w,h);
+  g.drawImage(src,0,0,w,h);dirty=true;return c.toDataURL('image/jpeg',0.82);
+}
+// IndexedDB store (per browser)
+const IDB={db:null,
+  open(){if(this.db)return Promise.resolve(this.db);return new Promise((res,rej)=>{try{const r=indexedDB.open('cap-studio',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('designs',{keyPath:'id'});r.onsuccess=()=>{this.db=r.result;res(this.db);};r.onerror=()=>rej(r.error);}catch(e){rej(e);}});},
+  async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('designs',mode),st=t.objectStore('designs');const out=fn(st);
+    t.oncomplete=()=>res(out&&out.result!==undefined?out.result:undefined);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});},
+  all(){return this.tx('readonly',st=>st.getAll());},
+  put(v){return this.tx('readwrite',st=>st.put(v));},
+  del(id){return this.tx('readwrite',st=>st.delete(id));}
+};
+const dlg=$('#designsDlg'),listEl=$('#designList');
+let storeOK=true;
+async function renderDesignList(){
+  let items=[];
+  try{items=await IDB.all();storeOK=true;}catch(e){storeOK=false;}
+  listEl.innerHTML='';
+  if(!storeOK){listEl.innerHTML='<li class="empty">Saving in this browser isn’t available here. Use “Download design file” to keep your design.</li>';$('#designSave').disabled=true;return;}
+  $('#designSave').disabled=false;
+  items.sort((a,b)=>b.updated-a.updated);
+  if(!items.length){listEl.innerHTML='<li class="empty">No saved designs yet. Name this one and save it to come back to it later.</li>';return;}
+  for(const it of items){
+    const li=document.createElement('li');li.className='design-item';
+    const img=document.createElement('img');img.alt='';img.src=it.thumb||'';
+    const meta=document.createElement('div');meta.className='meta';
+    const nm=document.createElement('strong');nm.textContent=it.name;const dt=document.createElement('span');
+    dt.textContent='Saved '+new Date(it.updated).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});meta.append(nm,dt);
+    const acts=document.createElement('div');acts.className='acts';
+    const open=document.createElement('button');open.className='btn';open.textContent='Open';
+    open.addEventListener('click',async()=>{try{await restoreDesign(it.design);$('#designName').value=it.name;dlg.close();toast('Opened '+it.name);}catch(e){toast('That design couldn’t be opened.');}});
+    const del=document.createElement('button');del.className='btn quiet';del.textContent='Delete';let armed=false;
+    del.addEventListener('click',async()=>{if(!armed){armed=true;del.textContent='Confirm delete';setTimeout(()=>{armed=false;del.textContent='Delete';},3000);return;}
+      try{await IDB.del(it.id);toast('Deleted '+it.name);renderDesignList();}catch(e){toast('That design couldn’t be deleted.');}});
+    acts.append(open,del);li.append(img,meta,acts);listEl.appendChild(li);
+  }
+}
+$('#designsBtn').addEventListener('click',()=>{$('#dlgStatus').textContent='';renderDesignList();if(!$('#designName').value)$('#designName').value='';dlg.showModal();});
+$('#designsClose').addEventListener('click',()=>dlg.close());
+$('#designSave').addEventListener('click',async()=>{
+  const name=($('#designName').value||'').trim()||('Design '+new Date().toLocaleDateString());
+  try{
+    const items=await IDB.all();const same=items.find(i=>i.name.toLowerCase()===name.toLowerCase());
+    const rec={id:same?same.id:(Date.now().toString(36)+Math.random().toString(36).slice(2,7)),name,updated:Date.now(),thumb:designThumb(),design:serializeDesign()};
+    await IDB.put(rec);$('#designName').value=name;toast(same?'Updated '+name:'Saved '+name);renderDesignList();
+  }catch(e){toast('The design couldn’t be saved here. Use “Download design file” instead.');}
+});
+$('#designName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#designSave').click();}});
+$('#designExport').addEventListener('click',()=>{
+  const name=($('#designName').value||'').trim()||'cap-design';
+  const file={app:'cap-studio',version:1,name,saved:new Date().toISOString(),design:serializeDesign()};
+  const fname=name.replace(/[^a-z0-9-_ ]/gi,'').trim().replace(/\s+/g,'-').toLowerCase()||'cap-design';
+  saveBlob(new Blob([JSON.stringify(file)],{type:'application/json'}),fname+'.json');
+});
+$('#designImport').addEventListener('click',()=>$('#designFileInput').click());
+$('#designFileInput').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const data=JSON.parse(await f.text());if(data.app!=='cap-studio')throw 0;await restoreDesign(data.design);
+    $('#designName').value=data.name||'';dlg.close();toast('Opened '+(data.name||'design file'));}
+  catch(err){toast('That file isn’t a Cap studio design file.');}
+});
 
 /* ---------- boot ---------- */
 syncColorUI();applyColors();

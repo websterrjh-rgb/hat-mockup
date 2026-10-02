@@ -138,6 +138,7 @@ body.viewer .stage{height:100%}
       <button class="btn quiet" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ <span class="lbl">Redo</span></button>
       <button class="btn quiet" id="spinBtn" aria-pressed="false" title="Spin the hat">↻ <span class="lbl">Spin</span></button>
       <button class="btn" id="designsBtn">Designs</button>
+      <button class="btn" id="videoBtn" title="Save a 360° turntable video of the hat as an MP4">360° video</button>
       <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
@@ -1333,7 +1334,7 @@ let toastTimer=0;function toast(msg){const dd=document.getElementById('designsDl
 /* export */
 let downloads=null,hasHost=!!(window.claude&&typeof window.claude.use==='function');
 const saveBtn=$('#saveBtn');
-if(hasHost){saveBtn.disabled=true;const tb=$('#templateBtn');if(tb)tb.disabled=true;window.claude.use('downloads').then(d=>{downloads=d;if(d){saveBtn.disabled=false;if(tb)tb.disabled=false;}else{saveBtn.hidden=true;if(tb)tb.hidden=true;}}).catch(()=>{saveBtn.hidden=true;if(tb)tb.hidden=true;});}
+if(hasHost){const vb=$('#videoBtn');saveBtn.disabled=true;vb.disabled=true;const tb=$('#templateBtn');if(tb)tb.disabled=true;window.claude.use('downloads').then(d=>{downloads=d;if(d){saveBtn.disabled=false;vb.disabled=false;if(tb)tb.disabled=false;}else{saveBtn.hidden=true;vb.hidden=true;if(tb)tb.hidden=true;}}).catch(()=>{saveBtn.hidden=true;vb.hidden=true;if(tb)tb.hidden=true;});}
 // Minimal zip writer (stored, no compression) so all angles download in one file
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
 function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC_T[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
@@ -1359,6 +1360,102 @@ const SHOTS=[['01-front','front'],['02-front-left','quarter'],['03-left-side','l
   ['05-right-side','right'],['06-front-right','quarterRight'],['07-underbrim','under'],['08-inside','insideFront']];
 VIEWS.quarterRight={yaw:-0.78,pitch:0.2,dist:42,target:[0,3.6,3.5]};
 function dataURLBytes(u){const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+/* ---------- 360° turntable video (MP4) ----------
+   Frames are rendered one by one and encoded with the browser's H.264 encoder (WebCodecs), then packed
+   into an MP4 by the small writer below, so the loop is smooth and seamless regardless of computer speed.
+   Browsers without WebCodecs fall back to recording the canvas in real time, if they can record MP4. */
+function mp4Box(type,...parts){let n=8;for(const p of parts)n+=p.length;const o=new Uint8Array(n),dv=new DataView(o.buffer);
+  dv.setUint32(0,n);for(let i=0;i<4;i++)o[4+i]=type.charCodeAt(i);let off=8;for(const p of parts){o.set(p,off);off+=p.length;}return o;}
+function mp4Bytes(spec){ // spec: [['u8'|'u16'|'u32'|'i16', value] | ['str', s] | ['zero', n] | ['raw', Uint8Array]]
+  let n=0;for(const [t,v] of spec)n+=t==='u8'?1:t==='u16'||t==='i16'?2:t==='u32'?4:t==='str'?v.length:t==='zero'?v:v.length;
+  const o=new Uint8Array(n),dv=new DataView(o.buffer);let off=0;
+  for(const [t,v] of spec){if(t==='u8')dv.setUint8(off++,v);else if(t==='u16'){dv.setUint16(off,v);off+=2;}else if(t==='i16'){dv.setInt16(off,v);off+=2;}
+    else if(t==='u32'){dv.setUint32(off,v>>>0);off+=4;}else if(t==='str'){for(let i=0;i<v.length;i++)o[off++]=v.charCodeAt(i);}
+    else if(t==='zero')off+=v;else{o.set(v,off);off+=v.length;}}
+  return o;}
+const MATRIX=[0x00010000,0,0,0,0x00010000,0,0,0,0x40000000].map(v=>['u32',v]);
+function buildMp4(chunks,avcC,w,h,fps){
+  const TS=90000,delta=TS/fps,n=chunks.length,dur=n*delta,durMs=Math.round(n*1000/fps);
+  const ftyp=mp4Box('ftyp',mp4Bytes([['str','isom'],['u32',512],['str','isom'],['str','iso2'],['str','avc1'],['str','mp41']]));
+  const total=chunks.reduce((a,c)=>a+c.data.length,0),mdatHead=mp4Bytes([['u32',8+total],['str','mdat']]);
+  const dataOff=ftyp.length+8;
+  const full=(type,ver,flags,body)=>mp4Box(type,mp4Bytes([['u8',ver],['u8',(flags>>16)&255],['u8',(flags>>8)&255],['u8',flags&255]]),body);
+  const mvhd=full('mvhd',0,0,mp4Bytes([['u32',0],['u32',0],['u32',1000],['u32',durMs],['u32',0x00010000],['u16',0x0100],['zero',10],...MATRIX,['zero',24],['u32',2]]));
+  const tkhd=full('tkhd',0,3,mp4Bytes([['u32',0],['u32',0],['u32',1],['u32',0],['u32',durMs],['zero',8],['u16',0],['u16',0],['u16',0],['u16',0],...MATRIX,['u32',w<<16],['u32',h<<16]]));
+  const mdhd=full('mdhd',0,0,mp4Bytes([['u32',0],['u32',0],['u32',TS],['u32',dur],['u16',0x55c4],['u16',0]]));
+  const hdlr=full('hdlr',0,0,mp4Bytes([['u32',0],['str','vide'],['zero',12],['str','VideoHandler'],['u8',0]]));
+  const vmhd=full('vmhd',0,1,mp4Bytes([['zero',8]]));
+  const dinf=mp4Box('dinf',full('dref',0,0,mp4Bytes([['u32',1],['raw',full('url ',0,1,new Uint8Array(0))]])));
+  const avc1=mp4Box('avc1',mp4Bytes([['zero',6],['u16',1],['zero',16],['u16',w],['u16',h],['u32',0x00480000],['u32',0x00480000],['u32',0],['u16',1],['zero',32],['u16',0x18],['i16',-1]]),mp4Box('avcC',avcC));
+  const stsd=full('stsd',0,0,mp4Bytes([['u32',1],['raw',avc1]]));
+  const stts=full('stts',0,0,mp4Bytes([['u32',1],['u32',n],['u32',delta]]));
+  const keys=[];chunks.forEach((c,i)=>{if(c.key)keys.push(['u32',i+1]);});
+  const stss=full('stss',0,0,mp4Bytes([['u32',keys.length],...keys]));
+  const stsc=full('stsc',0,0,mp4Bytes([['u32',1],['u32',1],['u32',n],['u32',1]]));
+  const stsz=full('stsz',0,0,mp4Bytes([['u32',0],['u32',n],...chunks.map(c=>['u32',c.data.length])]));
+  const stco=full('stco',0,0,mp4Bytes([['u32',1],['u32',dataOff]]));
+  const stbl=mp4Box('stbl',stsd,stts,stss,stsc,stsz,stco);
+  const moov=mp4Box('moov',mvhd,mp4Box('trak',tkhd,mp4Box('mdia',mdhd,hdlr,mp4Box('minf',vmhd,dinf,stbl))));
+  return new Blob([ftyp,mdatHead,...chunks.map(c=>c.data),moov],{type:'video/mp4'});
+}
+const videoBtn=$('#videoBtn');
+const VIDEO={seconds:8,fps:30};
+function setTurntableFrame(i,n){const v=VIEWS.quarter;cam.yaw=TAU*i/n;cam.pitch=0.16;cam.dist=v.dist;cam.target.set(...v.target);applyCamera();}
+async function pickEncoderConfig(){
+  if(typeof VideoEncoder==='undefined')return null;
+  for(const size of[1080,720])for(const codec of['avc1.640028','avc1.4D0028','avc1.42E028','avc1.42001F']){
+    const cfg={codec,width:size,height:size,bitrate:size>=1080?8_000_000:5_000_000,framerate:VIDEO.fps,latencyMode:'realtime',avc:{format:'avc'}};
+    try{const r=await VideoEncoder.isConfigSupported(cfg);if(r&&r.supported)return cfg;}catch(e){}
+  }
+  return null;
+}
+videoBtn.addEventListener('click',async()=>{
+  const label=videoBtn.textContent;videoBtn.disabled=true;saveBtn.disabled=true;videoBtn.textContent='Preparing…';
+  const keep={yaw:cam.yaw,pitch:cam.pitch,dist:cam.dist,target:cam.target.clone()},wasSpin=spinning;stopSpin();tween=null;
+  const size=renderer.getSize(new THREE.Vector2()),pr=renderer.getPixelRatio();
+  const restore=()=>{scene.background=null;renderer.setPixelRatio(pr);renderer.setSize(size.x,size.y,false);camera.aspect=size.x/Math.max(1,size.y);camera.updateProjectionMatrix();
+    cam.yaw=keep.yaw;cam.pitch=keep.pitch;cam.dist=keep.dist;cam.target.copy(keep.target);dirty=true;
+    if(wasSpin){spinning=true;spinBtn.setAttribute('aria-pressed','true');}videoBtn.disabled=false;saveBtn.disabled=false;videoBtn.textContent=label;};
+  const bg=lin(getComputedStyle(document.documentElement).getPropertyValue('--backdrop').trim()||'#E3E4E6'); // video has no transparency
+  const n=VIDEO.seconds*VIDEO.fps;
+  try{
+    const cfg=await pickEncoderConfig();
+    if(cfg){
+      renderer.setPixelRatio(1);renderer.setSize(cfg.width,cfg.height,false);camera.aspect=1;camera.updateProjectionMatrix();scene.background=bg;
+      const chunks=[];let avcC=null,failed=null;
+      const enc=new VideoEncoder({output:(chunk,meta)=>{const d=new Uint8Array(chunk.byteLength);chunk.copyTo(d);chunks.push({data:d,key:chunk.type==='key'});
+          if(meta&&meta.decoderConfig&&meta.decoderConfig.description){const d0=meta.decoderConfig.description;
+            avcC=d0 instanceof ArrayBuffer?new Uint8Array(d0.slice(0)):new Uint8Array(d0.buffer.slice(d0.byteOffset,d0.byteOffset+d0.byteLength));}},
+        error:e=>{failed=e;}});
+      enc.configure(cfg);
+      for(let i=0;i<n;i++){
+        if(failed)throw failed;
+        setTurntableFrame(i,n);renderer.render(scene,camera);
+        const f=new VideoFrame(canvas,{timestamp:Math.round(i*1e6/VIDEO.fps),duration:Math.round(1e6/VIDEO.fps)});
+        enc.encode(f,{keyFrame:i%VIDEO.fps===0});f.close();
+        while(enc.encodeQueueSize>8)await new Promise(r=>setTimeout(r,4));
+        if(i%6===0){videoBtn.textContent='Recording '+Math.round(i/n*100)+'%';await new Promise(r=>setTimeout(r,0));}
+      }
+      await enc.flush();enc.close();
+      if(failed||!avcC||!chunks.length)throw failed||new Error('no output');
+      restore();
+      saveBlob(buildMp4(chunks,avcC,cfg.width,cfg.height,VIDEO.fps),'cap-360.mp4');
+      return;
+    }
+    // fallback: record the canvas live while it turns
+    const mime=['video/mp4;codecs=avc1','video/mp4'].find(m=>typeof MediaRecorder!=='undefined'&&MediaRecorder.isTypeSupported(m));
+    if(!mime||!canvas.captureStream){restore();toast('This browser can’t create MP4 video. Try Chrome, Edge or Safari.');return;}
+    renderer.setPixelRatio(1);renderer.setSize(1080,1080,false);camera.aspect=1;camera.updateProjectionMatrix();scene.background=bg;
+    const stream=canvas.captureStream(VIDEO.fps),rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8_000_000}),parts=[];
+    rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data);};
+    const done=new Promise(r=>rec.onstop=r);
+    rec.start(250);const t0=performance.now(),ms=VIDEO.seconds*1000;
+    await new Promise(res=>{const step=()=>{const k=Math.min(1,(performance.now()-t0)/ms);setTurntableFrame(k*n,n);renderer.render(scene,camera);
+      videoBtn.textContent='Recording '+Math.round(k*100)+'%';if(k<1)requestAnimationFrame(step);else res();};requestAnimationFrame(step);});
+    rec.stop();await done;stream.getTracks().forEach(t=>t.stop());restore();
+    saveBlob(new Blob(parts,{type:'video/mp4'}),'cap-360.mp4');
+  }catch(err){restore();toast('The video couldn’t be created. Try again, or use a different browser.');}
+});
 saveBtn.addEventListener('click',async()=>{
   saveBtn.disabled=true;const label=saveBtn.textContent;saveBtn.textContent='Rendering…';
   await new Promise(r=>setTimeout(r,30));

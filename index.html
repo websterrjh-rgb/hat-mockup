@@ -402,13 +402,16 @@ function aForHeight(th,y){let lo=0,hi=1;for(let i=0;i<24;i++){const m=(lo+hi)/2;
 const campArch=th=>aForHeight(th,5.8+1.1*Math.cos(Math.min(1,Math.abs(th)/CAMP_F)*Math.PI/2));
 const campSideTop=th=>{const t=Math.min(1,Math.max(0,(Math.abs(th)-CAMP_F)/(CAMP_BK-CAMP_F)));return aForHeight(th,5.8+2.2*Math.pow(Math.sin(Math.PI*t),0.7));};
 let CENTER_A=2; // where the partial front seam stops (a-param); set below
+// Artwork on the outside bridges over seams the way a print, patch or embroidery does,
+// so the surfaces that carry it are built without the seam grooves.
+let SKIP_GROOVE=false;
 function panelShape(th,a){
   if(CAMP)return 0; // soft camp cap: flat-felled seams, no panel puff
   th=Math.atan2(Math.sin(th),Math.cos(th)); // wrap to (-180°, 180°] so both back panels match
   if(TRUCK){ // six panels: two front panels split by a full center seam, then side and back mesh panels
     const at=Math.abs(th),B6=[0,SEAM_TH[0],SEAM_TH[1],Math.PI];let k=0;while(k<2&&at>B6[k+1])k++;
     const frac=(at-B6[k])/(B6[k+1]-B6[k]),amp=k===0?0.07:0.12;let dmin=1e9;for(const b of B6)dmin=Math.min(dmin,Math.abs(at-b));
-    return amp*Math.sin(Math.PI*frac)-0.13*Math.exp(-(dmin/0.02)*(dmin/0.02));
+    return amp*Math.sin(Math.PI*frac)-(SKIP_GROOVE?0:0.13*Math.exp(-(dmin/0.02)*(dmin/0.02)));
   }
   const at=Math.abs(th);let dmin=1e9;for(const sv of SEAM_TH)dmin=Math.min(dmin,Math.abs(at-sv));
   let lo,hi,amp;
@@ -416,10 +419,10 @@ function panelShape(th,a){
   else if(at<SEAM_TH[1]){lo=SEAM_TH[0];hi=SEAM_TH[1];amp=0.16;}
   else{lo=SEAM_TH[1];hi=SEAM_TH[2];amp=0.16;}
   const x=at<SEAM_TH[0]?th:at,frac=(x-lo)/(hi-lo);
-  let g=amp*Math.sin(Math.PI*frac)-0.14*Math.exp(-(dmin/0.02)*(dmin/0.02));
+  let g=amp*Math.sin(Math.PI*frac)-(SKIP_GROOVE?0:0.14*Math.exp(-(dmin/0.02)*(dmin/0.02)));
   // A-frame peak: the upper front is pinched into a ridge along the partial center seam
   if(a!==undefined&&a>0.35){const k=Math.min(1,(a-0.35)/0.4),ks=k*k*(3-2*k);g+=0.25*ks*Math.max(0,1-Math.abs(th)/0.55);}
-  if(a!==undefined&&a>CENTER_A-0.015){const k=Math.min(1,(a-(CENTER_A-0.015))/0.03);g-=0.13*k*k*(3-2*k)*Math.exp(-(th/0.02)*(th/0.02));}
+  if(!SKIP_GROOVE&&a!==undefined&&a>CENTER_A-0.015){const k=Math.min(1,(a-(CENTER_A-0.015))/0.03);g-=0.13*k*k*(3-2*k)*Math.exp(-(th/0.02)*(th/0.02));}
   return g;
 }
 /* Crown shape, matched to the reference photos: every meridian runs from the base edge up to the button.
@@ -936,6 +939,7 @@ function decalMesh(geo,side){
   const m=new THREE.Mesh(geo,mat);m.visible=false;m.renderOrder=2;scene.add(m);
   return{mesh:m,base:geo.attributes.position.array.slice()};
 }
+SKIP_GROOVE=true;
 const frontGeo=gridGeometry(-1.3,1.3,200,48,0.97);offsetAlongNormals(frontGeo,0.035);
 const leftGeo=gridGeometry(0.3,2.62,240,48,0.95);offsetAlongNormals(leftGeo,0.035);
 const rightGeo=gridGeometry(-2.62,-0.3,240,48,0.95);offsetAlongNormals(rightGeo,0.035);
@@ -955,6 +959,7 @@ function dropOpening(geo,NT,NA,th0,span,aMax){ // remove triangles over the snap
   geo.setIndex(keep);return geo;
 }
 const backTagGeo=dropOpening((()=>{const g=gridGeometry(Math.PI-1.15,Math.PI+1.15,BK_NT,BK_NA,0.95,0);offsetAlongNormals(g,0.05);return g;})(),BK_NT,BK_NA,Math.PI-1.15,2.3,0.95);
+SKIP_GROOVE=false;
 // Inside tag lives on the sweatband: a strip that follows the band's inner face, unwrapped flat
 // (x = cm around the band from the front center, y = cm up from the bottom edge).
 const BAND={N:300,rows:10,y0:0.08,y1:2.82};

@@ -636,7 +636,10 @@ function buildTape(sv,a0){
     const a=a0+(0.985-a0)*j/NAT,p=new THREE.Vector3(...crownPoint(sv,a));
     if(prev)len+=p.distanceTo(prev);prev=p;
     if(startLen===null&&p.y>3.1)startLen=len; // text starts above the sweatband
-    const pt=new THREE.Vector3(...crownPoint(sv+0.01,a)).sub(p),pa=new THREE.Vector3(...crownPoint(sv,Math.min(1,a+0.01))).sub(p);
+    // Lay the tape flat across the seam, using the crown's shape without the seam groove. Measured on the
+    // groove's own steep wall, the tape tilted outward and its edge poked through the front of the hat.
+    SKIP_GROOVE=true;const p0=new THREE.Vector3(...crownPoint(sv,a));
+    const pt=new THREE.Vector3(...crownPoint(sv+0.01,a)).sub(p0),pa=new THREE.Vector3(...crownPoint(sv,Math.min(1,a+0.01))).sub(p0);SKIP_GROOVE=false;
     const across=pt.clone().normalize(),n=pt.clone().cross(pa).normalize(),w=HW*Math.min(1,crownS(a)*2.2);
     for(const sg of[-1,1]){const q=p.clone().addScaledVector(across,sg*w).addScaledVector(n,-0.07);pos.push(q.x,q.y,q.z);uv.push(j/NAT,sg<0?0:1);}
   }

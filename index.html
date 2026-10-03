@@ -980,7 +980,7 @@ function applyInsideFit(mode){const z=ZONES.inside;z.fit=mode;z.rot=0;z.h=0;
 function updateUV(key){
   scheduleCommit();
   const z=ZONES[key];if(!z.aspect)return;
-  const W=z.size,Hh=(key==='under'&&z.fit==='shape')?z.size*FD/FW:z.size/z.aspect,r=-z.rot*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
+  const W=z.size*(z.sizeScale||1),Hh=(key==='under'&&z.fit==='shape')?W*FD/FW:W/z.aspect,r=-z.rot*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
   for(const {d,side} of DECALS[key]){
     const p=d.base,uv=d.mesh.geometry.attributes.uv;
     for(let i=0;i<uv.count;i++){
@@ -1067,8 +1067,8 @@ function makeSamples(){
    SAMPLES.inside=c;}
 }
 function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
-function buildArt(key){
-  const z=ZONES[key];let src=null;
+function buildArt(key,part='all'){
+  const z=ZONES[key];let src=null;const B=part!=='art',Ar=part!=='back';
   if(z.source==='sample')src=SAMPLES[key];
   else if(z.source==='image')src=z.image;
   else if(z.source==='text'&&z.text.trim())src=textCanvas(z.text,z.font,z.textColor);
@@ -1082,26 +1082,67 @@ function buildArt(key){
     g.drawImage(src,(c.width-dw)/2,(c.height-dh)/2,dw,dh);g.restore();};
   if(z.backing==='tag'){ // woven/rubber tag: a tidy rectangle with a stitched edge
     const pad=Math.round(Math.max(w,h)*0.18);c.width=w+2*pad+2*P;c.height=h+2*pad+2*P;g=c.getContext('2d');
-    const r=Math.min(c.width,c.height)*0.08;roundRect(g,P,P,c.width-2*P,c.height-2*P,r);g.fillStyle=z.backingColor;g.fill();
+    const r=Math.min(c.width,c.height)*0.08;
+    if(B){roundRect(g,P,P,c.width-2*P,c.height-2*P,r);g.fillStyle=z.backingColor;g.fill();
     const lw=Math.max(2,pad*0.1),inset=pad*0.32;g.setLineDash([lw*3,lw*2]);g.lineWidth=lw;g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.3:-0.28);
-    roundRect(g,P+inset,P+inset,c.width-2*P-2*inset,c.height-2*P-2*inset,r*0.6);g.stroke();g.setLineDash([]);
-    drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,r));
+    roundRect(g,P+inset,P+inset,c.width-2*P-2*inset,c.height-2*P-2*inset,r*0.6);g.stroke();g.setLineDash([]);}
+    if(Ar)drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,r));
   }else if(z.backing==='patch'){
     const pad=Math.round(Math.max(w,h)*0.16);c.width=w+2*pad+2*P;c.height=h+2*pad+2*P;g=c.getContext('2d');
-    roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8);g.fillStyle=z.backingColor;g.fill();
+    if(B){roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8);g.fillStyle=z.backingColor;g.fill();
     g.lineWidth=Math.max(3,pad*0.14);g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.25:-0.22);
-    roundRect(g,P+g.lineWidth/2+2,P+g.lineWidth/2+2,c.width-2*P-g.lineWidth-4,c.height-2*P-g.lineWidth-4,pad*0.7);g.stroke();
-    drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8));
+    roundRect(g,P+g.lineWidth/2+2,P+g.lineWidth/2+2,c.width-2*P-g.lineWidth-4,c.height-2*P-g.lineWidth-4,pad*0.7);g.stroke();}
+    if(Ar)drawArt(()=>roundRect(g,P,P,c.width-2*P,c.height-2*P,pad*0.8));
   }else if(z.backing==='circle'){
     const d=Math.round(Math.hypot(w,h)*1.12);c.width=c.height=d+2*P;g=c.getContext('2d');
-    g.fillStyle=z.backingColor;g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);g.fill();
+    if(B){g.fillStyle=z.backingColor;g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);g.fill();
     g.lineWidth=Math.max(3,d*0.02);g.strokeStyle=shade(z.backingColor,isDark(z.backingColor)?0.25:-0.22);
-    g.beginPath();g.arc(c.width/2,c.height/2,d/2-g.lineWidth*2,0,TAU);g.stroke();
-    drawArt(()=>{g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);});
+    g.beginPath();g.arc(c.width/2,c.height/2,d/2-g.lineWidth*2,0,TAU);g.stroke();}
+    if(Ar)drawArt(()=>{g.beginPath();g.arc(c.width/2,c.height/2,d/2,0,TAU);});
   }else{
-    c.width=w+2*P;c.height=h+2*P;g=c.getContext('2d');g.drawImage(src,P,P,w,h);
+    c.width=w+2*P;c.height=h+2*P;g=c.getContext('2d');if(Ar)g.drawImage(src,P,P,w,h);
   }
   return c;
+}
+/* ---- molded rubber look for patches, tags and circles ----
+   The backing gets a beveled, rounded edge and a soft drop shadow onto the hat; the artwork is embossed
+   so it stands up off the patch and casts a small shadow onto it. A height map drives the 3D relief. */
+function cvs(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function solidOf(cv,fill,alpha=1){const o=cvs(cv.width,cv.height),g=o.getContext('2d');g.drawImage(cv,0,0);g.globalCompositeOperation='source-in';g.globalAlpha=alpha;g.fillStyle=fill;g.fillRect(0,0,o.width,o.height);return o;}
+function blurOf(cv,r){if(r<=1)return cv;const sw=Math.max(1,Math.round(cv.width/r)),sh=Math.max(1,Math.round(cv.height/r));
+  const a=cvs(sw,sh),ga=a.getContext('2d');ga.imageSmoothingQuality='high';ga.drawImage(cv,0,0,sw,sh);
+  const o=cvs(cv.width,cv.height),go=o.getContext('2d');go.imageSmoothingQuality='high';go.drawImage(a,0,0,cv.width,cv.height);return o;}
+function buildPatchArt(key){
+  const z=ZONES[key],all=buildArt(key);
+  if(!all)return null;
+  if(z.backing==='none')return{color:all,bump:null,scale:1};
+  const M=Math.max(all.width,all.height),pad=Math.round(M*0.05),W=all.width+2*pad,H=all.height+2*pad,u=M/400;
+  const place=cv=>{const o=cvs(W,H);o.getContext('2d').drawImage(cv,pad,pad);return o;};
+  const back=place(buildArt(key,'back')),art=place(buildArt(key,'art'));
+  const color=cvs(W,H),g=color.getContext('2d');
+  // backing, with its edge rounded over: lighter along the top, darker along the bottom
+  g.drawImage(back,0,0);
+  const inner=blurOf(solidOf(back,'#fff'),Math.max(2,9*u)); // fades toward the edge
+  const rim=cvs(W,H),gr=rim.getContext('2d');gr.drawImage(solidOf(back,'#000'),0,0);gr.globalCompositeOperation='destination-out';gr.drawImage(inner,0,0);
+  const light=solidOf(rim,'#fff',0.35),dark=solidOf(rim,'#000',0.3);
+  g.save();g.globalCompositeOperation='source-atop';g.drawImage(light,0,-3*u);g.drawImage(dark,0,3*u);g.restore();
+  // artwork casts a small shadow onto the patch, then sits on top
+  g.save();g.globalCompositeOperation='source-atop';g.drawImage(blurOf(solidOf(art,'#000',0.45),Math.max(1,3*u)),1.5*u,3*u);g.restore();
+  g.drawImage(art,0,0);
+  // the art's own raised edge
+  const aInner=blurOf(solidOf(art,'#fff'),Math.max(1,4*u)),aRim=cvs(W,H),ga=aRim.getContext('2d');
+  ga.drawImage(solidOf(art,'#000'),0,0);ga.globalCompositeOperation='destination-out';ga.drawImage(aInner,0,0);
+  g.save();g.globalCompositeOperation='source-atop';g.drawImage(solidOf(aRim,'#fff',0.28),0,-2*u);g.drawImage(solidOf(aRim,'#000',0.22),0,2*u);g.restore();
+  // soft glossy sheen across the top
+  const sh=g.createLinearGradient(0,0,0,H);sh.addColorStop(0,'rgba(255,255,255,0.14)');sh.addColorStop(0.45,'rgba(255,255,255,0)');
+  g.save();g.globalCompositeOperation='source-atop';g.fillStyle=sh;g.fillRect(0,0,W,H);g.restore();
+  // drop shadow of the whole patch onto the hat
+  g.save();g.globalCompositeOperation='destination-over';g.drawImage(blurOf(solidOf(back,'#000',0.4),Math.max(2,6*u)),2*u,5*u);g.restore();
+  // height map: beveled patch, artwork raised above it
+  const bump=cvs(W,H),gb=bump.getContext('2d');gb.fillStyle='#000';gb.fillRect(0,0,W,H);
+  gb.drawImage(blurOf(solidOf(back,'#9a9a9a'),Math.max(2,7*u)),0,0);
+  gb.drawImage(blurOf(solidOf(art,'#fff'),Math.max(1,2.5*u)),0,0);
+  return{color,bump,scale:W/all.width};
 }
 /* ---- underbrim fitting ---- */
 const FIT_NOTES={shape:'Stretches the artwork’s outline to the brim’s outline. Use this for art drawn on the brim template.',
@@ -1192,13 +1233,15 @@ function brimTemplate(){
 
 function refreshArt(key){
   scheduleCommit();if(key==='front')resetMatch();
-  const z=ZONES[key],art=buildArt(key);
+  const z=ZONES[key],built=buildPatchArt(key),art=built&&built.color;
   if(z.tex){z.tex.dispose();z.tex=null;}
-  for(const {d} of DECALS[key]){d.mesh.material.map=null;}
+  if(z.bumpTex){z.bumpTex.dispose();z.bumpTex=null;}
+  for(const {d} of DECALS[key]){d.mesh.material.map=null;d.mesh.material.bumpMap=null;}
   if(art){
     const t=new THREE.CanvasTexture(art);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAniso;t.minFilter=THREE.LinearMipmapLinearFilter;
-    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;
-    for(const {d} of DECALS[key]){d.mesh.material.map=t;d.mesh.material.needsUpdate=true;}
+    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;z.sizeScale=built.scale;
+    let bt=null;if(built.bump){bt=new THREE.CanvasTexture(built.bump);bt.anisotropy=maxAniso;bt.wrapS=bt.wrapT=THREE.ClampToEdgeWrapping;z.bumpTex=bt;}
+    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=bt?0.6:0;m.roughness=bt?0.36:0.8;m.needsUpdate=true;}
     if(key==='under'&&z.autoFit){applyFit(z.fit);z.autoFit=false;syncZoneUI('under');}
     if(key==='inside'&&z.autoFit){applyInsideFit(z.fit);z.autoFit=false;syncZoneUI('inside');}
     updateUV(key);

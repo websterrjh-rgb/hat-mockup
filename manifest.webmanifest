@@ -1,0 +1,19 @@
+{
+  "name": "Cap studio: 3D hat mockups",
+  "short_name": "Cap studio",
+  "description": "Design custom hats in 3D: place art on the front, sides, back, underbrim and inside, choose colors, and export images and 360° video.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#E3E4E6",
+  "theme_color": "#1E6B4A",
+  "categories": ["design", "productivity", "graphics"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

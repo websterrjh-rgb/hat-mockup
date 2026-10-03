@@ -176,7 +176,7 @@ body.viewer .stage{height:100%}
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
       <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
-      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus a color spec with HEX and Pantone codes">Save PNGs</button>
+      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus labeled color callout sheets and a color spec with HEX and Pantone codes">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
       <button data-view="front">Front</button>
@@ -2062,6 +2062,100 @@ videoBtn.addEventListener('click',async()=>{
     saveBlob(new Blob(parts,{type:'video/mp4'}),'cap-360.mp4');
   }catch(err){restore();toast('The video couldn’t be created. Try again, or use a different browser.');}
 });
+/* ---------- color callout sheets: renders with labeled lines pointing at each colored part ---------- */
+function calloutItems(){
+  const items=[],V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  const crownN=(p)=>V(p.x,Math.pow(Math.max(0,p.y)/H,3)*6,p.z-ZA).normalize();
+  const onCrown=(th,a,lift=0.06)=>{const q=crownPoint(th,a),p=V(...q),n=crownN(p);return{p:p.addScaledVector(n,lift),n};};
+  const inside=(th,y,inset)=>{const a=aForHeight(th,y),q=crownPoint(th,a),p=V(...q),n=crownN(p);return{p:p.addScaledVector(n,-inset),n:n.clone().negate()};};
+  const add=(part,hexes,at,views)=>{if(!hexes||!hexes.length||!at)return;items.push({part,hexes:hexes.map(h=>h.toUpperCase()),p:at.p,n:at.n,views});};
+  const OUT=['quarter','back'],UNDER=['under'];
+  // crown, or each panel
+  const recolored=PANELS.some(([k])=>colors[k]);
+  const S0=SEAM_TH[0],S1=SEAM_TH[1];
+  const panelAt={p_front:CAMP?[0,0.22]:SIX?[0.3,0.3]:[0.3,0.5],p_top:BUCKET?[0.9,0.85]:[0,0.82],p_lfront:[0.5,0.45],p_rfront:[-0.5,0.45],
+    p_lside:CAMP?[1.6,0.3]:BUCKET?[1.3,0.45]:[(S0+S1)/2,0.45],p_rside:CAMP?[-1.6,0.3]:BUCKET?[-1.3,0.45]:[-(S0+S1)/2,0.45],
+    p_lback:[(S1+Math.PI)/2,0.45],p_rback:[-(S1+Math.PI)/2,0.45],p_ltop:[1.0,0.82],p_rtop:[-1.0,0.82]};
+  if(recolored)for(const [k,label] of PANELS){const t=panelAt[k];if(t)add(label+' panel',[eff(k)],onCrown(t[0],t[1]),OUT);}
+  else add('Crown',[colors.crown],onCrown(-0.25,0.42),OUT);
+  if(TRUCK&&!recolored)add('Mesh',[eff('mesh')],onCrown(-(S0+S1)/2,0.4),OUT);
+  add('Crown stitching',[eff('stitchCrown')],BUCKET?onCrown(0,0.3):CAMP?onCrown(CAMP_F,0.2):onCrown(S0,0.3),OUT);
+  if(!CAMP&&!BUCKET)add('Top button',[colors.button],{p:V(apex[0],apex[1]+0.32,apex[2]),n:V(0,1,0.2).normalize()},OUT);
+  // brim
+  const bt=(th,w)=>({p:V(...brimSurf(th,w,BT+0.04)),n:V(0,1,0)});
+  add('Brim top',[colors.brim],bt(BUCKET?0.6:0.45,0.72),OUT);
+  add('Brim stitching',[eff('stitchBrim')],bt(BUCKET?-0.4:-0.2,0.5),OUT);
+  if(ropeOn){const th=0.25,L=brimFlat(th,1)[2],w=L>0.05?Math.min(0.5,0.62/L):0;add('Rope',[colors.rope],{p:V(...brimSurf(th,w,BT+0.46)),n:V(0,1,0.4).normalize()},OUT);}
+  add('Underbrim',[colors.under],{p:V(...brimSurf(BUCKET?0.5:0.35,0.6,-BT-0.05)),n:V(0,-1,0)},UNDER);
+  // closure
+  if(!BUCKET){
+    add(CAMP?'Webbing strap':'Snap strap',[colors.strap],{p:snapPt(Math.PI+0.15,1.1,CAMP?0.95:R_OUT+0.01),n:V(0,0,-1)},['back']);
+    add('Binding tape',[eff('binding')],onCrown(Math.PI-OPEN_W*0.55,openA(OPEN_W*0.55)+0.012,0.05),['back']);
+  }
+  // inside
+  add('Sweatband',[eff('sweat')],inside(0.35,1.4,0.3),UNDER);
+  add('Seam tape',[eff('tape')],inside(BUCKET?0:CAMP?CAMP_F:-S0,5.2,0.12),UNDER);
+  add('Lining',[eff('lining')],inside(-1.35,5.5,0.05),UNDER);
+  // artwork: placed where each design sits
+  const artColors=k=>{const z=ZONES[k];const out=[];if(['patch','circle','tag'].includes(z.backing))out.push(z.backingColor);
+    if(z.source==='text'&&z.text.trim())out.push(z.textColor);
+    else{const a=buildArt(k,'art')||buildArt(k);if(a)artPalette(a,4).filter(c=>c.share>0.05).slice(0,3).forEach(c=>out.push(c.hex));}
+    return[...new Set(out.map(h=>h.toUpperCase()))];};
+  const has=k=>ZONES[k]&&ZONES[k].tex;
+  if(has('front')){const z=ZONES.front,th=Math.asin(Math.max(-0.95,Math.min(0.95,z.h/(A*0.95))));add(z.title,artColors('front'),onCrown(th,aForHeight(th,z.v),0.12),OUT);}
+  for(const k of['left','right'])if(has(k)){const z=ZONES[k],sg=k==='left'?1:-1,th=sg*Math.acos(Math.max(-0.95,Math.min(0.95,-z.h/B)));add(z.title,artColors(k),onCrown(th,aForHeight(th,z.v),0.12),OUT);}
+  for(const k of['back','backTag'])if(has(k)){const z=ZONES[k],th=Math.PI+Math.asin(Math.max(-0.95,Math.min(0.95,z.h/(A*0.95))));add(z.title,artColors(k),onCrown(th,aForHeight(th,z.v),0.12),['back']);}
+  if(has('under')){const z=ZONES.under;add(z.title,artColors('under'),{p:V(...brimSurf(-0.2,0.55,-BT-0.06)),n:V(0,-1,0)},UNDER);}
+  if(has('inside'))add(ZONES.inside.title+' print',artColors('inside'),inside(0.15,4.5,0.12),UNDER);
+  if(has('inTag'))add(ZONES.inTag.title,artColors('inTag'),inside(-1.75,ZONES.inTag.v,0.3),UNDER);
+  if((tapeText.text||'').trim())add('Tape text',[tapeText.color],inside(BUCKET?0:CAMP?CAMP_F:S0,6.2,0.12),UNDER);
+  return items;
+}
+const CALLOUT_VIEWS=[['quarter','Front three-quarter','09-colors-front'],['back','Back','10-colors-back'],['under','Underside and inside','11-colors-underside']];
+function renderCalloutSheets(S){
+  const items=calloutItems(),out=[],styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',dad:'Dad hat',bucket:'Bucket hat'}[STYLE]||'5-panel';
+  const camPos=new THREE.Vector3();
+  // give each part to the view where it faces the camera best
+  const scoreIn=(it,view)=>{const v=VIEWS[view];const cp=Math.cos(v.pitch);
+    camPos.set(v.target[0]+v.dist*cp*Math.sin(v.yaw),v.target[1]+v.dist*Math.sin(v.pitch),v.target[2]+v.dist*cp*Math.cos(v.yaw));
+    return it.n.dot(camPos.clone().sub(it.p).normalize());};
+  for(const it of items){let best=null,bs=-1;for(const v of it.views){const sc=scoreIn(it,v);if(sc>bs){bs=sc;best=v;}}it.view=bs>-0.05?best:null;}
+  const font=(w,px)=>`${w} ${px}px "Archivo", system-ui, sans-serif`;
+  for(const [view,title,file] of CALLOUT_VIEWS){
+    const list=items.filter(i=>i.view===view);if(!list.length)continue;
+    const v=VIEWS[view];cam.yaw=v.yaw;cam.pitch=v.pitch;cam.dist=v.dist;cam.target.set(...v.target);
+    applyCamera();camera.updateMatrixWorld();renderer.render(scene,camera);
+    const W=2800,Hc=1700,img=1460,ix=(W-img)/2,iy=150; // room for a column of labels on each side
+    const c=document.createElement('canvas');c.width=W;c.height=Hc;const g=c.getContext('2d');
+    g.fillStyle='#EEEEEC';g.fillRect(0,0,W,Hc);g.drawImage(canvas,ix,iy,img,img);
+    g.fillStyle='#202428';g.font=font(800,46);g.fillText('Color callouts: '+title,60,82);
+    g.fillStyle='#5F656C';g.font=font(500,26);g.fillText((($('#designName')&&$('#designName').value.trim())||'Untitled design')+'  |  '+styleName,62,122);
+    // project anchors into the sheet
+    const pts=list.map(it=>{const q=it.p.clone().project(camera);return{it,x:ix+(q.x+1)/2*img,y:iy+(1-q.y)/2*img};});
+    const left=pts.filter(p=>p.x<W/2).sort((a,b)=>a.y-b.y),right=pts.filter(p=>p.x>=W/2).sort((a,b)=>a.y-b.y);
+    const LW=560,top=190,bottom=Hc-60;
+    const place=(arr,side)=>{const n=arr.length;if(!n)return;const step=Math.min(150,(bottom-top)/n),start=top+((bottom-top)-step*n)/2;
+      arr.forEach((p,i)=>{const ly=start+step*i+step/2,lx=side<0?50:W-50-LW;
+        // leader line: from the label to the part, ending in a dot
+        const ex=side<0?lx+LW+12:lx-12,kx=side<0?ix-30:ix+img+30;
+        g.strokeStyle='rgba(32,36,40,0.75)';g.lineWidth=3;g.beginPath();g.moveTo(ex,ly);g.lineTo(kx,ly);g.lineTo(p.x,p.y);g.stroke();
+        g.fillStyle='#ffffff';g.beginPath();g.arc(p.x,p.y,11,0,TAU);g.fill();g.lineWidth=4;g.strokeStyle='#202428';g.stroke();
+        g.fillStyle='#202428';g.beginPath();g.arc(p.x,p.y,4,0,TAU);g.fill();
+        // label card
+        g.fillStyle='#ffffff';g.strokeStyle='#D2D4D7';g.lineWidth=2;roundRect(g,lx,ly-58,LW,116,14);g.fill();g.stroke();
+        const hx=p.it.hexes;let sx=lx+18;
+        hx.forEach(h=>{g.fillStyle=h;roundRect(g,sx,ly-38,62,76,10);g.fill();g.strokeStyle='rgba(0,0,0,0.18)';g.lineWidth=2;g.stroke();sx+=72;});
+        const tx=sx+8;g.fillStyle='#202428';g.font=font(750,30);g.fillText(p.it.part,tx,ly-16,lx+LW-tx-14);
+        g.fillStyle='#4A4F55';g.font=font(500,22);
+        if(hx.length===1){g.fillText(hx[0],tx,ly+16,lx+LW-tx-14);g.fillText(nearestPantone(hx[0]).name,tx,ly+44,lx+LW-tx-14);}
+        else{g.font=font(500,20);g.fillText(hx.join('  '),tx,ly+14,lx+LW-tx-14);g.fillText(hx.map(h=>nearestPantone(h).name.replace('PANTONE ','')).join(', '),tx,ly+42,lx+LW-tx-14);}
+      });};
+    place(left,-1);place(right,1);
+    g.fillStyle='#7A8087';g.font=font(500,20);g.fillText('Pantone values are the closest Pantone Solid Coated match to each screen color. Confirm with a physical guide before production.',60,Hc-22);
+    out.push({name:'cap-'+file+'.png',data:dataURLBytes(c.toDataURL('image/png'))});
+  }
+  return out;
+}
 saveBtn.addEventListener('click',async()=>{
   saveBtn.disabled=true;const label=saveBtn.textContent;saveBtn.textContent='Rendering…';
   await new Promise(r=>setTimeout(r,30));
@@ -2078,6 +2172,7 @@ saveBtn.addEventListener('click',async()=>{
       applyCamera();renderer.render(scene,camera);
       files.push({name:'cap-'+name+'.png',data:dataURLBytes(canvas.toDataURL('image/png'))});
     }
+    try{files.push(...renderCalloutSheets(S));}catch(e){console.warn('callout sheets skipped',e);}
   }finally{
     scene.background=null;renderer.setPixelRatio(pr);renderer.setSize(size.x,size.y,false);camera.aspect=size.x/Math.max(1,size.y);camera.updateProjectionMatrix();
     cam.yaw=keep.yaw;cam.pitch=keep.pitch;cam.dist=keep.dist;cam.target.copy(keep.target);dirty=true;

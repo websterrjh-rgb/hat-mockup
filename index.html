@@ -566,7 +566,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     for(const sg of[1,-1]){ // each mesh panel can have its own color; the inside shows the same mesh
       const side=colors[sg>0?'p_lside':'p_rside']||eff('mesh'),back=colors[sg>0?'p_lback':'p_rback']||eff('mesh');
       band(sg*SEAM_TH[0],sg*SEAM_TH[1],outside?side:shade(side,-0.04));band(sg*SEAM_TH[1],sg*Math.PI,outside?back:shade(back,-0.04));}
-    g.save();g.globalCompositeOperation='destination-out';
+    g.save();g.globalCompositeOperation='destination-out';g.fillStyle='#000';
     const pitch=0.24,r=0.085,da=pitch*0.87/PROFILE_CM;let row=0;
     for(let a=0.025;a<=0.93;a+=da,row++){
       const sA=crownS(a);if(sA<0.12)continue;const R=9.0*sA,dth=pitch/R,rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM,off=(row%2)*dth/2;
@@ -654,7 +654,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
   }
   for(const side of[1,-1]){
     const pts=arch(side,OPEN_W,OPEN_A);
-    g.globalCompositeOperation='destination-out';g.beginPath();
+    g.globalCompositeOperation='destination-out';g.fillStyle='#000';g.beginPath(); // fully opaque fill = fully removed
     g.moveTo(pts[0][0],CH+2);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(side>0?CW+2:-2,pts[pts.length-1][1]);g.lineTo(side>0?CW+2:-2,CH+2);g.closePath();g.fill();
     g.globalCompositeOperation='source-over';
   }

@@ -176,7 +176,7 @@ body.viewer .stage{height:100%}
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
       <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
-      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images">Save PNGs</button>
+      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus a color spec with HEX and Pantone codes">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
       <button data-view="front">Front</button>
@@ -1892,6 +1892,68 @@ function makeZip(files){
   e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csize,true);e.setUint32(16,off,true);
   return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:'application/zip'});
 }
+/* ---------- color spec: HEX codes plus the closest Pantone match for every part ----------
+   Pantone values are the common on-screen (sRGB) equivalents of Pantone Solid Coated colors. Screen
+   colors can't be matched to ink exactly, so each match lists its color difference (Delta E 2000). */
+const PANTONE=[["Yellow C","FEDD00"],["100 C","F6EB61"],["101 C","F7EA48"],["102 C","FCE300"],["107 C","FBE122"],["109 C","FFD100"],["116 C","FFCD00"],["123 C","FFC72C"],["130 C","F2A900"],["137 C","FFA300"],["143 C","F1B434"],["151 C","FF8200"],["152 C","E57200"],["158 C","E87722"],["165 C","FF671F"],["166 C","E35205"],["172 C","FA4616"],["173 C","CF4520"],["179 C","E03C31"],["180 C","BE3A34"],["Warm Red C","F9423A"],["Red 032 C","EF3340"],["Orange 021 C","FE5000"],["185 C","E4002B"],["186 C","C8102E"],["187 C","A6192E"],["188 C","76232F"],["192 C","E40046"],["193 C","BF0D3E"],["199 C","D50032"],["200 C","BA0C2F"],["201 C","9D2235"],["202 C","862633"],["7420 C","9B2242"],["7421 C","651D32"],["7427 C","97233F"],["203 C","ECB3CB"],["205 C","E0457B"],["206 C","CE0037"],["208 C","861F41"],["209 C","6F263D"],["210 C","F99FC9"],["211 C","F57EB6"],["212 C","F04E98"],["213 C","E31C79"],["214 C","CE0F69"],["215 C","AC145A"],["219 C","DA1884"],["Rubine Red C","CE0058"],["Rhodamine Red C","E10098"],["226 C","D0006F"],["230 C","F4A6D7"],["232 C","E93CAC"],["233 C","C6007E"],["241 C","AF1685"],["Purple C","BB29BB"],["253 C","AD1AAC"],["254 C","981D97"],["255 C","72246C"],["258 C","8C4799"],["259 C","6D2077"],["265 C","9063CD"],["266 C","753BBD"],["267 C","5F259F"],["268 C","582C83"],["269 C","512D6D"],["Violet C","440099"],["270 C","B4B5DF"],["271 C","9595D2"],["272 C","7474C1"],["273 C","24135F"],["274 C","211551"],["Reflex Blue C","001489"],["279 C","418FDE"],["280 C","012169"],["281 C","00205B"],["282 C","041E42"],["283 C","92C1E9"],["284 C","6CACE4"],["285 C","0072CE"],["286 C","0033A0"],["287 C","003087"],["288 C","002D72"],["289 C","0C2340"],["2767 C","13294B"],["2768 C","071D49"],["290 C","B9D9EB"],["291 C","9BCBEB"],["292 C","69B3E7"],["293 C","003DA5"],["294 C","002F6C"],["295 C","002855"],["296 C","041C2C"],["298 C","41B6E6"],["299 C","00A3E0"],["Process Blue C","0085CA"],["300 C","005EB8"],["301 C","004B87"],["302 C","003B5C"],["303 C","002A3A"],["306 C","00B5E2"],["307 C","006BA6"],["308 C","00587C"],["312 C","00A9CE"],["313 C","0092BC"],["315 C","005B7F"],["320 C","009CA6"],["321 C","008C95"],["326 C","00B2A9"],["327 C","008675"],["328 C","007367"],["Green C","00AB84"],["335 C","007B5F"],["336 C","00664F"],["340 C","00965E"],["342 C","006747"],["343 C","115740"],["3435 C","154734"],["347 C","009A44"],["348 C","00843D"],["349 C","046A38"],["350 C","2C5234"],["7735 C","36573B"],["354 C","00B140"],["355 C","009639"],["356 C","007A33"],["357 C","215732"],["7739 C","319B42"],["7740 C","3A913F"],["7741 C","44883E"],["361 C","43B02A"],["362 C","509E2F"],["363 C","4C8C2B"],["364 C","4A7729"],["368 C","78BE20"],["369 C","64A70B"],["375 C","97D700"],["376 C","84BD00"],["382 C","C4D600"],["390 C","B5BD00"],["7499 C","F1E6B2"],["7500 C","DFD1A7"],["7501 C","D9C89E"],["7502 C","CEB888"],["7503 C","A39382"],["7504 C","94795D"],["7527 C","D6D2C4"],["4685 C","E0C6AD"],["469 C","693F23"],["476 C","4E3629"],["4625 C","4F2C1D"],["Black C","2D2926"],["Black 6 C","101820"],["Black 7 C","3D3935"],["Cool Gray 1 C","D9D9D6"],["Cool Gray 2 C","D0D0CE"],["Cool Gray 3 C","C8C9C7"],["Cool Gray 4 C","BBBCBC"],["Cool Gray 5 C","B1B3B3"],["Cool Gray 6 C","A7A8AA"],["Cool Gray 7 C","97999B"],["Cool Gray 8 C","888B8D"],["Cool Gray 9 C","75787B"],["Cool Gray 10 C","63666A"],["Cool Gray 11 C","53565A"],["Warm Gray 1 C","D7D2CB"],["Warm Gray 2 C","CBC4BC"],["Warm Gray 3 C","BFB8AF"],["Warm Gray 4 C","B6ADA5"],["Warm Gray 5 C","ACA39A"],["Warm Gray 6 C","A59C94"],["Warm Gray 7 C","968C83"],["Warm Gray 8 C","8C8279"],["Warm Gray 9 C","83786F"],["Warm Gray 10 C","796E65"],["Warm Gray 11 C","6E6259"],["427 C","D0D3D4"],["428 C","C1C6C8"],["429 C","A2AAAD"],["430 C","7C878E"],["431 C","5B6770"],["432 C","333F48"],["433 C","1D252D"],["663 C","E5E1E6"],["11-0601 TCX Bright White","F4F5F0"]];
+function hexToLab(hex){
+  const lin=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
+  const [r,g,b]=hexToRgb(hex).map(lin);
+  const x=(0.4124*r+0.3576*g+0.1805*b)/0.95047,y=0.2126*r+0.7152*g+0.0722*b,z=(0.0193*r+0.1192*g+0.9505*b)/1.08883;
+  const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;const fx=f(x),fy=f(y),fz=f(z);
+  return[116*fy-16,500*(fx-fy),200*(fy-fz)];
+}
+function deltaE2000(l1,l2){
+  const [L1,a1,b1]=l1,[L2,a2,b2]=l2,rad=Math.PI/180;
+  const C1=Math.hypot(a1,b1),C2=Math.hypot(a2,b2),Cb=(C1+C2)/2,G=0.5*(1-Math.sqrt(Math.pow(Cb,7)/(Math.pow(Cb,7)+Math.pow(25,7))));
+  const a1p=(1+G)*a1,a2p=(1+G)*a2,C1p=Math.hypot(a1p,b1),C2p=Math.hypot(a2p,b2);
+  const h=(b,a)=>{if(!a&&!b)return 0;const v=Math.atan2(b,a)/rad;return v<0?v+360:v;};
+  const h1p=h(b1,a1p),h2p=h(b2,a2p),dLp=L2-L1,dCp=C2p-C1p;
+  let dhp=0;if(C1p*C2p){dhp=h2p-h1p;if(dhp>180)dhp-=360;else if(dhp<-180)dhp+=360;}
+  const dHp=2*Math.sqrt(C1p*C2p)*Math.sin(dhp*rad/2),Lbp=(L1+L2)/2,Cbp=(C1p+C2p)/2;
+  let hbp=h1p+h2p;if(C1p*C2p){hbp=Math.abs(h1p-h2p)>180?(h1p+h2p+(h1p+h2p<360?360:-360))/2:(h1p+h2p)/2;}
+  const T=1-0.17*Math.cos((hbp-30)*rad)+0.24*Math.cos(2*hbp*rad)+0.32*Math.cos((3*hbp+6)*rad)-0.2*Math.cos((4*hbp-63)*rad);
+  const dTh=30*Math.exp(-Math.pow((hbp-275)/25,2)),Rc=2*Math.sqrt(Math.pow(Cbp,7)/(Math.pow(Cbp,7)+Math.pow(25,7)));
+  const Sl=1+0.015*Math.pow(Lbp-50,2)/Math.sqrt(20+Math.pow(Lbp-50,2)),Sc=1+0.045*Cbp,Sh=1+0.015*Cbp*T,Rt=-Math.sin(2*dTh*rad)*Rc;
+  return Math.sqrt(Math.pow(dLp/Sl,2)+Math.pow(dCp/Sc,2)+Math.pow(dHp/Sh,2)+Rt*(dCp/Sc)*(dHp/Sh));
+}
+const PANTONE_LAB=PANTONE.map(([n,h])=>[n,'#'+h,hexToLab('#'+h)]);
+function nearestPantone(hex){const L=hexToLab(hex);let best=null;
+  for(const [n,h,lab] of PANTONE_LAB){const d=deltaE2000(L,lab);if(!best||d<best.d)best={name:'PANTONE '+n,hex:h,d};}return best;}
+function colorSpecRows(){
+  const rows=[],add=(section,part,hex)=>{if(hex)rows.push([section,part,hex.toUpperCase()]);};
+  const recolored=PANELS.some(([k])=>colors[k]);
+  if(recolored)for(const [k,label] of PANELS)add('Crown',label+' panel',eff(k));
+  else add('Crown','Crown',colors.crown);
+  if(TRUCK&&!recolored)add('Crown','Mesh',eff('mesh'));
+  add('Crown','Crown stitching',eff('stitchCrown'));
+  if(!CAMP&&!BUCKET)add('Crown','Top button',colors.button);
+  add('Brim','Brim top',colors.brim);add('Brim','Underbrim',colors.under);add('Brim','Brim stitching',eff('stitchBrim'));
+  if(ropeOn)add('Brim','Rope',colors.rope);
+  if(!BUCKET){add('Closure',CAMP?'Webbing strap and buckle':'Snap strap',colors.strap);add('Closure','Binding tape',eff('binding'));}
+  add('Inside','Lining',eff('lining'));add('Inside','Seam tape',eff('tape'));add('Inside','Sweatband',eff('sweat'));
+  if((tapeText.text||'').trim())add('Inside','Tape text',tapeText.color);
+  for(const k of ZONE_KEYS){const z=ZONES[k];if(!z.tex)continue;const where=z.title||k;
+    if(['patch','circle','tag'].includes(z.backing))add('Artwork',where+': '+(z.backing==='tag'?'tag':'patch')+' color',z.backingColor);
+    if(z.source==='text'&&z.text.trim())add('Artwork',where+': text',z.textColor);
+    else{const art=buildArt(k,'art')||buildArt(k);if(art)artPalette(art,5).filter(c=>c.share>0.04).forEach((c,i)=>add('Artwork',where+': color '+(i+1)+' ('+Math.round(c.share*100)+'%)',c.hex));}
+  }
+  return rows.map(([sec,part,hex])=>{const p=nearestPantone(hex);return{sec,part,hex,pms:p.name,pmsHex:p.hex.toUpperCase(),d:p.d};});
+}
+function colorSpecFiles(){
+  const rows=colorSpecRows(),styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',dad:'Dad hat',bucket:'Bucket hat'}[STYLE]||'5-panel';
+  const name=($('#designName')&&$('#designName').value.trim())||'Untitled design';
+  const q=d=>d<2?'very close':d<5?'close':d<10?'approximate':'loose';
+  const w=[22,40];let txt=`CAP STUDIO COLOR SPEC\nDesign: ${name}\nStyle: ${styleName}\nCreated: ${new Date().toLocaleString()}\n\n`;
+  let sec='';for(const r of rows){if(r.sec!==sec){sec=r.sec;txt+=`\n${sec.toUpperCase()}\n`;}
+    txt+=`  ${r.part.padEnd(42)} ${r.hex}   ${(r.pms+' ('+r.pmsHex+')').padEnd(40)} Delta E ${r.d.toFixed(1)}, ${q(r.d)}\n`;}
+  txt+=`\nNOTES\n  Pantone matches are the closest Pantone Solid Coated color to each on-screen HEX value. White matches use\n  Pantone 11-0601 TCX Bright White from Pantone's textile range, since the coated ink range has no white.\n  Screen colors and printed or dyed colors never match exactly: a Delta E under 2 is hard to tell apart,\n  2 to 5 is a close match, and higher numbers mean no Pantone in the list is near that color.\n  Confirm every color against a physical Pantone guide (or the factory's thread and fabric cards) before production.\n  Artwork colors are the main colors found in each uploaded image, with the share of the artwork they cover.\n`;
+  const csvq=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  let csv='Section,Part,HEX,Closest Pantone,Pantone HEX,Delta E 2000,Match\n';
+  for(const r of rows)csv+=[r.sec,r.part,r.hex,r.pms,r.pmsHex,r.d.toFixed(1),q(r.d)].map(csvq).join(',')+'\n';
+  const enc=new TextEncoder();
+  return[{name:'cap-colors.txt',data:enc.encode(txt)},{name:'cap-colors.csv',data:enc.encode(csv)}];
+}
 const SHOTS=[['01-front','front'],['02-front-left','quarter'],['03-left-side','left'],['04-back','back'],
   ['05-right-side','right'],['06-front-right','quarterRight'],['07-underbrim','under'],['08-inside','insideFront']];
 VIEWS.quarterRight={yaw:-0.78,pitch:0.2,dist:42,target:[0,3.6,3.5]};
@@ -2023,6 +2085,7 @@ saveBtn.addEventListener('click',async()=>{
     saveBtn.disabled=false;saveBtn.textContent=label;
   }
   if(!files.length){toast('The images couldn’t be created. Try again.');return;}
+  try{files.push(...colorSpecFiles());}catch(e){console.warn('color spec skipped',e);}
   saveBlob(makeZip(files),'cap-mockup-views.zip');
 });
 async function saveBlob(blob,filename){

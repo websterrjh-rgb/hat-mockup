@@ -1,6 +1,6 @@
 /* Cap studio service worker: makes the app installable and lets it open offline.
    Bump VERSION whenever you upload a new index.html so returning visitors get the update. */
-const VERSION = 'cap-studio-v14';
+const VERSION = 'cap-studio-v15';
 const SHELL = [
   './',
   './index.html',

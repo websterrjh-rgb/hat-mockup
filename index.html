@@ -176,7 +176,7 @@ body.viewer .stage{height:100%}
       <button class="btn quiet" id="spinBtn" aria-pressed="false" title="Spin the hat">↻ <span class="lbl">Spin</span></button>
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
-      <button class="btn" id="videoBtn" title="Save a 360° turntable video of the hat as an MP4">360° video</button>
+      <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
       <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
@@ -1838,8 +1838,16 @@ function buildMp4(chunks,avcC,w,h,fps){
   return new Blob([ftyp,mdatHead,...chunks.map(c=>c.data),moov],{type:'video/mp4'});
 }
 const videoBtn=$('#videoBtn');
-const VIDEO={seconds:8,fps:30};
-function setTurntableFrame(i,n){const v=VIEWS.quarter;cam.yaw=TAU*i/n;cam.pitch=0.16;cam.dist=v.dist;cam.target.set(...v.target);applyCamera();}
+const VIDEO={seconds:14,fps:30};
+// Two smooth turns: the first circles the hat from slightly above; on the second the camera swoops underneath
+// to show the underbrim and the inside, then rises back so the end meets the start for a seamless loop.
+function setTurntableFrame(i,n){
+  const u=i/n,v=VIEWS.quarter,top=v.target,under=[0,1.6,4.2];
+  const k=u<0.5?0:Math.pow(Math.sin(Math.PI*(u-0.5)/0.5),2); // 0 on the first turn, eases to 1 halfway through the second
+  cam.yaw=TAU*2*u;cam.pitch=0.16+(-1.12-0.16)*k;cam.dist=v.dist+(38-v.dist)*k;
+  cam.target.set(top[0]+(under[0]-top[0])*k,top[1]+(under[1]-top[1])*k,top[2]+(under[2]-top[2])*k);
+  applyCamera();
+}
 async function pickEncoderConfig(){
   if(typeof VideoEncoder==='undefined')return null;
   for(const size of[1080,720])for(const codec of['avc1.640028','avc1.4D0028','avc1.42E028','avc1.42001F']){

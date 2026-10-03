@@ -34,6 +34,7 @@
   --rule:#373B40; --field:#25282C; --accent:#57B98F; --accent-ink:#0E1A14; --chip:#2A2D31; color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{height:100%;margin:0;background:var(--panel);color:var(--ink);
   font-family:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
@@ -126,6 +127,8 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 .seg{display:inline-flex;border:1px solid var(--rule);border-radius:9px;overflow:hidden;background:var(--field)}
 .seg button{border:0;background:none;color:var(--ink);font:inherit;font-size:13.5px;font-weight:550;padding:7px 12px;cursor:pointer}
 .seg button + button{border-left:1px solid var(--rule)}
+.seg.wrap{display:flex;flex-wrap:wrap}
+.seg.wrap button{flex:1 0 auto}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .slider{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;margin:10px 0 4px}
@@ -1116,6 +1119,69 @@ function buildPatchArt(key){
   const z=ZONES[key],all=buildArt(key);
   if(!all)return null;
   if(z.backing==='none')return{color:all,bump:null,scale:1};
+  if(z.backing==='embroidered'){
+    /* Satin-stitch embroidery, built pixel by pixel:
+       - every stroke is domed (rounded over at its edges, flatter across wide areas), like padded embroidery;
+       - threads run across each stroke, edge to edge, following the shape, with a groove between threads;
+       - each thread varies slightly in tone, and the dome is lit from the top left so it reads as raised;
+       - a soft shadow falls on the fabric around it. A matching height map adds live lighting in 3D. */
+    const sc0=Math.min(1,900/Math.max(all.width,all.height));
+    const aw=Math.max(2,Math.round(all.width*sc0)),ah=Math.max(2,Math.round(all.height*sc0));
+    const M=Math.max(aw,ah),pad=Math.round(M*0.04),W=aw+2*pad,H=ah+2*pad;
+    const art=cvs(W,H),gx=art.getContext('2d');gx.imageSmoothingQuality='high';gx.drawImage(all,pad,pad,aw,ah);
+    const src=gx.getImageData(0,0,W,H).data,N=W*H;
+    const pxPerMm=M/Math.max(10,z.size*10);           // the art's width on the hat sets the thread scale
+    const R=Math.max(3,1.6*pxPerMm);
+    // distance to the edge of the design (two-pass chamfer)
+    const dist=new Float32Array(N),BIG=1e6;
+    for(let i=0;i<N;i++)dist[i]=src[i*4+3]>110?BIG:0;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!dist[i])continue;let d=dist[i];
+      if(x>0)d=Math.min(d,dist[i-1]+1);if(y>0){d=Math.min(d,dist[i-W]+1);if(x>0)d=Math.min(d,dist[i-W-1]+1.414);if(x<W-1)d=Math.min(d,dist[i-W+1]+1.414);}dist[i]=d;}
+    for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const i=y*W+x;if(!dist[i])continue;let d=dist[i];
+      if(x<W-1)d=Math.min(d,dist[i+1]+1);if(y<H-1){d=Math.min(d,dist[i+W]+1);if(x<W-1)d=Math.min(d,dist[i+W+1]+1.414);if(x>0)d=Math.min(d,dist[i+W-1]+1.414);}dist[i]=d;}
+    // dome height: rises over R pixels from the edge, then levels off
+    const hgt=new Float32Array(N);
+    for(let i=0;i<N;i++){const t=Math.min(1,dist[i]/R);hgt[i]=dist[i]>0?Math.sqrt(1-(1-t)*(1-t)):0;}
+    // thread direction field: across each stroke (along the gradient of the smoothed edge distance)
+    const sd=new Float32Array(N),tmp=new Float32Array(N),rb=2;
+    for(let y=0;y<H;y++){let acc=0;for(let x=-rb;x<W+rb;x++){if(x+rb<W)acc+=dist[y*W+x+rb];if(x-rb-1>=0)acc-=dist[y*W+x-rb-1];if(x>=0&&x<W)tmp[y*W+x]=acc;}}
+    for(let x=0;x<W;x++){let acc=0;for(let y=-rb;y<H+rb;y++){if(y+rb<H)acc+=tmp[(y+rb)*W+x];if(y-rb-1>=0)acc-=tmp[(y-rb-1)*W+x];if(y>=0&&y<H)sd[y*W+x]=acc;}}
+    const fx=new Float32Array(N),fy=new Float32Array(N);
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;let u=sd[i+1]-sd[i-1],v=sd[i+W]-sd[i-W];const l=Math.hypot(u,v);
+      if(l<1e-6){u=0.7071;v=0.7071;}else{u/=l;v/=l;}fx[i]=u;fy[i]=v;}
+    // fibers: random noise smeared along the thread direction (line integral convolution) gives satin streaks
+    const thw=Math.max(1,Math.round(0.35*pxPerMm)),cw=Math.ceil(W/thw)+1,coarse=new Float32Array(cw*(Math.ceil(H/thw)+1));
+    for(let i=0;i<coarse.length;i++)coarse[i]=Math.random();
+    const noise=new Float32Array(N);for(let y=0;y<H;y++)for(let x=0;x<W;x++)noise[y*W+x]=0.55*Math.random()+0.45*coarse[Math.floor(y/thw)*cw+Math.floor(x/thw)];
+    const inside=i=>dist[i]>0,Ls=Math.round(Math.max(6,R*1.6)),lic=new Float32Array(N);let mean=0,cntIn=0;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!inside(i))continue;
+      let acc=noise[i],n=1;
+      for(const sg of[1,-1]){let px=x,py=y;for(let s2=0;s2<Ls;s2++){const j=Math.round(py)*W+Math.round(px);px+=sg*fx[j];py+=sg*fy[j];
+        const qx=Math.round(px),qy=Math.round(py);if(qx<0||qy<0||qx>=W||qy>=H)break;const q=qy*W+qx;if(!inside(q))break;acc+=noise[q];n++;}}
+      lic[i]=acc/n;mean+=lic[i];cntIn++;}
+    mean/=Math.max(1,cntIn);let vr=0;for(let i=0;i<N;i++)if(inside(i))vr+=(lic[i]-mean)**2;const sdv=Math.sqrt(vr/Math.max(1,cntIn))||1;
+    const L=[-0.45,-0.6,0.66],ll=Math.hypot(...L);L[0]/=ll;L[1]/=ll;L[2]/=ll;
+    const out=gx.createImageData(W,H),o=out.data,bumpData=new Uint8ClampedArray(N*4);
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+      const i=y*W+x,k=i*4,al=src[k+3];
+      bumpData[k+3]=255;if(al<8)continue;
+      const groove=inside(i)?Math.min(1,Math.max(0,0.5+0.3*(lic[i]-mean)/sdv)):0.5;
+      const dhx=(hgt[i+1]-hgt[i-1])*R*0.55,dhy=(hgt[i+W]-hgt[i-W])*R*0.55;
+      let nx=-dhx,ny=-dhy,nz=1;const nl=Math.hypot(nx,ny,nz);nx/=nl;ny/=nl;nz/=nl;
+      const diff=Math.max(0,nx*L[0]+ny*L[1]+nz*L[2]);
+      const sheen=Math.pow(Math.abs(fx[i]*L[0]+fy[i]*L[1]),2)*Math.pow(diff,5)*0.35*groove; // light catching the threads
+      const shade=(0.45+0.65*diff)*(0.62+0.5*groove);
+      for(let c=0;c<3;c++)o[k+c]=Math.min(255,src[k+c]*shade+255*sheen);
+      o[k+3]=al;
+      const hv=Math.min(255,hgt[i]*190+groove*50+15);bumpData[k]=bumpData[k+1]=bumpData[k+2]=hv;
+    }
+    const color=cvs(W,H),g=color.getContext('2d');g.putImageData(out,0,0);
+    // soft shadow on the fabric, offset down and right from the light
+    g.save();g.globalCompositeOperation='destination-over';
+    g.drawImage(blurOf(solidOf(art,'#000',0.38),Math.max(1.5,pxPerMm*0.6)),pxPerMm*0.25,pxPerMm*0.45);g.restore();
+    const bump=cvs(W,H);bump.getContext('2d').putImageData(new ImageData(bumpData,W,H),0,0);
+    return{color,bump,scale:W/(aw),thread:true};
+  }
   const M=Math.max(all.width,all.height),pad=Math.round(M*0.05),W=all.width+2*pad,H=all.height+2*pad,u=M/400;
   const place=cv=>{const o=cvs(W,H);o.getContext('2d').drawImage(cv,pad,pad);return o;};
   const back=place(buildArt(key,'back')),art=place(buildArt(key,'art'));
@@ -1241,7 +1307,7 @@ function refreshArt(key){
     const t=new THREE.CanvasTexture(art);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAniso;t.minFilter=THREE.LinearMipmapLinearFilter;
     t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;z.sizeScale=built.scale;
     let bt=null;if(built.bump){bt=new THREE.CanvasTexture(built.bump);bt.anisotropy=maxAniso;bt.wrapS=bt.wrapT=THREE.ClampToEdgeWrapping;z.bumpTex=bt;}
-    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=bt?0.6:0;m.roughness=bt?0.36:0.8;m.needsUpdate=true;}
+    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=built.thread?0.3:bt?0.6:0;m.roughness=built.thread?0.6:bt?0.36:0.8;m.needsUpdate=true;}
     if(key==='under'&&z.autoFit){applyFit(z.fit);z.autoFit=false;syncZoneUI('under');}
     if(key==='inside'&&z.autoFit){applyInsideFit(z.fit);z.autoFit=false;syncZoneUI('inside');}
     updateUV(key);
@@ -1366,8 +1432,8 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
     <p class="fitnote" id="inside-fitnote"></p></div>`:''}
   ${groupOf(key)?`<div class="group"><span class="label">Editing</span><div class="inline"><div class="seg">${SUBS[groupOf(key)].map(k=>`<button data-sub="${k}" aria-pressed="${k===key}">${SUB_LABELS[k]}</button>`).join('')}</div>
     ${key==='left'||key==='right'?`<button class="btn quiet" data-act="copyside">Copy to ${key==='left'?'right':'left'} side</button>`:''}</div></div>`:''}
-  <div class="group"><span class="label">Backing</span><div class="inline"><div class="seg" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">None</button><button data-v="patch">Patch</button><button data-v="circle">Circle</button></div>
-    <input type="color" id="${key}-bcolor" aria-label="Backing color"></div>
+  <div class="group"><span class="label">Finish</span><div class="seg wrap" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">Print</button><button data-v="patch">Square patch</button><button data-v="circle">Circle patch</button><button data-v="embroidered">Embroidered</button></div>
+    <div class="inline" id="${key}-bcolorwrap" style="margin-top:10px"><label class="check" style="margin:0"><input type="color" id="${key}-bcolor" aria-label="Patch color"> Patch color</label></div>
     <div class="slider" id="${key}-fillwrap"><label for="${key}-fill">Artwork fill</label><output id="${key}-fill-out"></output>
       <input type="range" id="${key}-fill" data-zone="${key}" data-prop="fill" min="30" max="100" step="1"></div></div>
   <div class="group"><span class="label">Placement</span>
@@ -1388,7 +1454,7 @@ function syncZoneUI(key){
     const dot=$(`#${key}-bgdot`);dot.style.background=z.bgColor||'transparent';dot.style.display=z.bgColor?'inline-block':'none';
     $(`#${key}-bgnote`).textContent=z.bgOn?(z.bgColor?'Removed the solid background color shown. Raise the tolerance if traces remain; lower it if parts of your design disappear.':'No solid background found to remove at this tolerance. Try raising it.'):'Turn this on to remove a solid-color background from your image.';}}
   {const FD={tag:0.86,patch:0.88,circle:0.96},f=z.fill||FD[z.backing]||0.88,fi=$(`#${key}-fill`);
-   $(`#${key}-fillwrap`).hidden=z.backing==='none';fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
+   const flat=z.backing==='none'||z.backing==='embroidered';$(`#${key}-fillwrap`).hidden=flat;$(`#${key}-bcolorwrap`).hidden=flat;fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
   $(`#${key}-text`).value=z.text;$(`#${key}-font`).value=z.font;$(`#${key}-tcolor`).value=z.textColor;$(`#${key}-bcolor`).value=z.backingColor;
   $$(`#${key}-backing button`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.backing)));
   if(key==='under'){$$('#under-fit button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.fit)));$('#under-fitnote').textContent=FIT_NOTES[z.fit];}
@@ -1428,7 +1494,8 @@ panels.addEventListener('input',e=>{
     z.bgOn=$(`#${key}-bgon`).checked;z.bgHoles=$(`#${key}-bgholes`).checked;z.bgTol=+$(`#${key}-bgtol`).value;$(`#${key}-bgtol-out`).textContent=z.bgTol;
     clearTimeout(z._bgT);z._bgT=setTimeout(()=>prepareImage(key,false),t.type==='range'?120:0);return;}
   if(t.type==='range'&&t.dataset.prop==='fill'){z.fill=parseFloat(t.value)/100;$(`#${t.id}-out`).textContent=Math.round(t.value)+'%';cancelAnimationFrame(t._raf);t._raf=requestAnimationFrame(()=>refreshArt(key));}
-  else if(t.type==='range'){z[t.dataset.prop]=parseFloat(t.value);$(`#${t.id}-out`).textContent=fmt(t.dataset.prop,t.value);updateUV(key);}
+  else if(t.type==='range'){z[t.dataset.prop]=parseFloat(t.value);$(`#${t.id}-out`).textContent=fmt(t.dataset.prop,t.value);updateUV(key);
+    if(t.dataset.prop==='size'&&z.backing==='embroidered'){clearTimeout(z._embT);z._embT=setTimeout(()=>refreshArt(key),250);}}
   else if(t.id===`${key}-text`){z.text=t.value;clearTimeout(textTimer);textTimer=setTimeout(()=>{
       if(z.text.trim()){if(key==='under'&&z.source!=='text'){z.fit='free';z.size=10;z.h=-XC;z.v=0;z.rot=0;syncZoneUI(key);}if(key==='inside'&&z.source!=='text'){z.fit='free';z.size=6;z.h=0;z.v=5;z.rot=0;syncZoneUI(key);}z.source='text';}
       else if(z.source==='text')z.source=z.image?'image':null;

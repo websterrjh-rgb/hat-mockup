@@ -232,6 +232,12 @@ body.viewer .stage{height:100%}
           </div>
           <label class="check"><input type="checkbox" id="ropeToggle" checked> Rope above the brim</label>
           <button class="btn quiet" id="toneStitch" style="margin-top:10px">Use tone-on-tone stitching</button>
+        </div>
+        <div class="group">
+          <span class="label">Crown panels</span>
+          <div class="colorgrid" id="panelColors"></div>
+          <p class="fitnote">Give any panel its own color. Panels you don’t change follow the crown color.</p>
+          <button class="btn quiet" id="panelsReset" style="margin-top:8px">Match all panels to the crown</button>
           <label class="check"><input type="checkbox" id="perfToggle" checked> Laser-perforated side and back panels</label>
         </div>
         <div class="group">
@@ -314,6 +320,7 @@ function lin(hex){return new THREE.Color(hex).convertSRGBToLinear();}
 const colors={crown:'#F3F3F1',brim:'#1F2225',under:'#1F2225',button:'#1F2225',strap:'#1F2225',rope:'#F4F4F2',
   binding:null,lining:null,tape:null,sweat:null,stitchCrown:null,stitchBrim:null,mesh:'#EEEAE0'}; // null = follows the fabric color
 function eff(k){if(colors[k])return colors[k];const c=colors.crown,d=isDark(c);
+  if(k.startsWith('p_'))return(TRUCK&&MESH_PANELS.includes(k))?colors.mesh:c;
   if(k==='stitchCrown')return shade(c,d?0.28:-0.3);
   if(k==='stitchBrim')return shade(colors.brim,isDark(colors.brim)?0.2:-0.2);
   if(k==='binding')return shade(c,d?0.07:-0.07);if(k==='tape')return shade(c,d?0.08:-0.04);return c;}
@@ -333,6 +340,13 @@ if(RESUMING)document.getElementById('welcome').hidden=true;
 if(STYLE!=='camp'&&STYLE!=='trucker')STYLE='5panel';
 const CAMP=STYLE==='camp',TRUCK=STYLE==='trucker';
 let perforated=!CAMP&&!TRUCK;
+// Crown panels for each style: [color key, label, region]. "Left" and "right" are the wearer's.
+const PANELS=CAMP?[['p_front','Front'],['p_lside','Left side'],['p_rside','Right side'],['p_ltop','Left crown'],['p_rtop','Right crown']]
+  :TRUCK?[['p_lfront','Front left'],['p_rfront','Front right'],['p_lside','Left side'],['p_rside','Right side'],['p_lback','Left back'],['p_rback','Right back']]
+  :[['p_front','Front'],['p_lside','Left side'],['p_rside','Right side'],['p_lback','Left back'],['p_rback','Right back']];
+const MESH_PANELS=['p_lside','p_rside','p_lback','p_rback'];
+const PANEL_RESET={};for(const k of['p_front','p_lfront','p_rfront','p_lside','p_rside','p_lback','p_rback','p_ltop','p_rtop'])PANEL_RESET[k]=null;
+Object.assign(colors,PANEL_RESET);
 if(TRUCK)Object.assign(colors,{crown:'#D8D4CB',brim:'#D8D4CB',under:'#D8D4CB',button:'#D8D4CB',strap:'#E7E1D4',mesh:'#EEEAE0'});
 if(CAMP)Object.assign(colors,{crown:'#2E56C9',brim:'#2E56C9',under:'#2E56C9',button:'#2E56C9',strap:'#1F2225',tape:'#1F2225',sweat:'#1F2225'});
 const CAMP_INSIDE=CAMP?'#1F2225':null; // camp caps use black binding and seam tape inside
@@ -521,16 +535,37 @@ function openA(d){return archA(d,OPEN_W,OPEN_A);}
 const uX=th=>(th+Math.PI)/TAU*CW, aY=a=>(1-a)*CH;
 const PROFILE_CM=(function(){let L=0,p=crownPoint(Math.PI/2,0);for(let k=1;k<=200;k++){const q=crownPoint(Math.PI/2,k/200);L+=Math.hypot(q[0]-p[0],q[1]-p[1],q[2]-p[2]);p=q;}return L;})();
 
-function paintCrown(){paintCrownCanvas(crownCanvas,crownTex,colors.crown,eff('binding'));paintCrownCanvas(insideCanvas,insideTex,eff('lining'),eff('binding'));}
-function paintCrownCanvas(cv,tex,base,binding){
+function paintCrown(){paintCrownCanvas(crownCanvas,crownTex,colors.crown,eff('binding'),true);paintCrownCanvas(insideCanvas,insideTex,eff('lining'),eff('binding'),false);}
+function paintCrownCanvas(cv,tex,base,binding,outside){
   const g=cv.getContext('2d'),dark=isDark(base);
   g.globalCompositeOperation='source-over';g.clearRect(0,0,CW,CH);
   g.fillStyle=base;g.fillRect(0,0,CW,CH);
+  // panel colors: a band between two angles (both halves of the texture handled by sign), or a camp panel outline
+  const band=(t0,t1,col)=>{const x0=uX(t0),x1=uX(t1);g.fillStyle=col;g.fillRect(Math.min(x0,x1)-1,0,Math.abs(x1-x0)+2,CH);};
+  if(outside){
+    const pc=k=>colors[k];
+    if(CAMP){
+      const curve=(f,t0,t1)=>{for(let i=0;i<=60;i++){const t=t0+(t1-t0)*i/60,q=f(t);g.lineTo(q[0],q[1]);}};
+      for(const sg of[1,-1]){const top=pc(sg>0?'p_ltop':'p_rtop'),side=pc(sg>0?'p_lside':'p_rside');
+        if(top)band(0,sg*Math.PI,top);
+        if(side){g.fillStyle=side;g.beginPath();g.moveTo(uX(sg*CAMP_F),CH);curve(th=>[uX(sg*th),aY(campSideTop(th))],CAMP_F,CAMP_BK);g.lineTo(uX(sg*CAMP_BK),CH);g.closePath();g.fill();}}
+      if(pc('p_front')){g.fillStyle=pc('p_front');g.beginPath();g.moveTo(uX(-CAMP_F),CH);curve(th=>[uX(th),aY(campArch(th))],-CAMP_F,CAMP_F);g.lineTo(uX(CAMP_F),CH);g.closePath();g.fill();}
+      else if(pc('p_ltop')||pc('p_rtop')){ // keep the front panel in the crown color under recolored crown panels
+        g.fillStyle=base;g.beginPath();g.moveTo(uX(-CAMP_F),CH);curve(th=>[uX(th),aY(campArch(th))],-CAMP_F,CAMP_F);g.lineTo(uX(CAMP_F),CH);g.closePath();g.fill();}
+    }else if(TRUCK){
+      if(pc('p_lfront'))band(0,SEAM_TH[0],pc('p_lfront'));
+      if(pc('p_rfront'))band(0,-SEAM_TH[0],pc('p_rfront'));
+    }else{
+      if(pc('p_front'))band(-SEAM_TH[0],SEAM_TH[0],pc('p_front'));
+      for(const sg of[1,-1]){const sd=pc(sg>0?'p_lside':'p_rside'),bk=pc(sg>0?'p_lback':'p_rback');
+        if(sd)band(sg*SEAM_TH[0],sg*SEAM_TH[1],sd);if(bk)band(sg*SEAM_TH[1],sg*Math.PI,bk);}
+    }
+  }
   // perforations
   if(TRUCK){ // trucker mesh on the side and back panels: real see-through holes in a honeycomb pattern
-    const mc=eff('mesh');g.save();g.beginPath();
-    for(const sg of[1,-1]){const x0=uX(sg*SEAM_TH[0]),x1=uX(sg*Math.PI);g.rect(Math.min(x0,x1),0,Math.abs(x1-x0),CH);}
-    g.clip();g.fillStyle=base===colors.crown?mc:shade(mc,-0.04);g.fillRect(0,0,CW,CH);g.restore();
+    for(const sg of[1,-1]){ // each mesh panel can have its own color; the inside shows the same mesh
+      const side=colors[sg>0?'p_lside':'p_rside']||eff('mesh'),back=colors[sg>0?'p_lback':'p_rback']||eff('mesh');
+      band(sg*SEAM_TH[0],sg*SEAM_TH[1],outside?side:shade(side,-0.04));band(sg*SEAM_TH[1],sg*Math.PI,outside?back:shade(back,-0.04));}
     g.save();g.globalCompositeOperation='destination-out';
     const pitch=0.24,r=0.085,da=pitch*0.87/PROFILE_CM;let row=0;
     for(let a=0.025;a<=0.93;a+=da,row++){
@@ -543,7 +578,7 @@ function paintCrownCanvas(cv,tex,base,binding){
     g.restore();
   }
   if(perforated&&!TRUCK){
-    g.fillStyle=shade(base,dark?-0.45:-0.36);
+    g.fillStyle=dark?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.3)';
     const pitch=0.56,r=0.12,da=pitch/PROFILE_CM*1.0;
     let row=0;
     for(let a=0.1;a<=0.8;a+=da,row++){
@@ -1678,7 +1713,7 @@ function matchColors(){
   const combos=[];for(const c of crownChoices)for(const f of schemes)combos.push(f(c));
   const pick=combos[matchStep%combos.length];matchStep++;
   Object.assign(colors,{crown:pick.crown,brim:pick.brim,under:pick.under,button:pick.button,strap:pick.strap,rope:pick.rope,
-    stitchCrown:pick.stitchCrown,stitchBrim:pick.stitchBrim,binding:null,lining:null,tape:CAMP_INSIDE,sweat:CAMP_INSIDE});
+    ...PANEL_RESET,stitchCrown:pick.stitchCrown,stitchBrim:pick.stitchBrim,binding:null,lining:null,tape:CAMP_INSIDE,sweat:CAMP_INSIDE});
   applyColors();syncColorUI();
   $('#matchBtn').textContent='Try another combination';
   $('#matchNote').textContent=`${pick.name} (${(matchStep-1)%combos.length+1} of ${combos.length}), built from the colors in your front design. Undo goes back to your previous colors.`;
@@ -1711,10 +1746,12 @@ function selectTab(name,moveCam=true,exact=false){
 $$('.tabs button').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.tab)));
 
 /* colors */
+{const box=$('#panelColors');for(const [k,label] of PANELS){const l=document.createElement('label');l.innerHTML=`<input type="color" data-color="${k}"> ${label}`;box.appendChild(l);}}
+$('#panelsReset').addEventListener('click',()=>{Object.assign(colors,PANEL_RESET);applyColors();syncColorUI();});
 const presetsEl=$('#presets');
 PRESETS.forEach(p=>{const b=document.createElement('button');b.className='swatch';
   b.innerHTML=`<span class="chips"><i style="background:${p.c.crown}"></i><i style="background:${p.c.brim}"></i><i style="background:${p.c.under}"></i></span>${p.name}`;
-  b.addEventListener('click',()=>{Object.assign(colors,p.c,{binding:null,lining:null,tape:CAMP_INSIDE,sweat:CAMP_INSIDE,stitchCrown:null,stitchBrim:null});applyColors();syncColorUI();});presetsEl.appendChild(b);});
+  b.addEventListener('click',()=>{Object.assign(colors,p.c,PANEL_RESET,{binding:null,lining:null,tape:CAMP_INSIDE,sweat:CAMP_INSIDE,stitchCrown:null,stitchBrim:null});applyColors();syncColorUI();});presetsEl.appendChild(b);});
 function syncColorUI(){$$('[data-color]').forEach(i=>i.value=eff(i.dataset.color));}
 let colorRaf=0;
 $$('[data-color]').forEach(i=>i.addEventListener('input',()=>{colors[i.dataset.color]=i.value;cancelAnimationFrame(colorRaf);colorRaf=requestAnimationFrame(()=>{applyColors();syncColorUI();});}));
@@ -1916,7 +1953,7 @@ async function restoreDesign(d){
   if(d.style&&d.style!==STYLE){await switchStyle(d.style,d);return;} // a design made in the other style
   if(d.zones.side&&!d.zones.left){const o=d.zones.side,w=o.which||'left',empty={...o,source:null,image:null,text:''};
     d.zones.left=(w==='left'||w==='both')?o:empty;d.zones.right=(w==='right'||w==='both')?o:empty;}
-  Object.assign(colors,d.colors||{});
+  Object.assign(colors,PANEL_RESET,d.colors||{});
   perforated=d.perforated!==false;ropeOn=d.ropeOn!==false;
   $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
   for(const k of ZONE_KEYS){const z=ZONES[k],o=d.zones[k];if(!o)continue;

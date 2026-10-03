@@ -110,6 +110,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .panel{padding:20px 22px 28px;display:none}
 .panel.active{display:block}
 .panel h2{margin:0 0 4px;font-size:21px;font-weight:800;font-stretch:80%;letter-spacing:-.005em}
+.bgbox{margin-top:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:10px;background:var(--field)}
+.bgbox .check:first-child{margin-top:0}
+.bgdot{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid var(--rule);vertical-align:-2px;margin-left:4px}
 .fitnote{font-size:12.5px;color:var(--muted);margin:8px 0 0;max-width:36ch}
 .panel .lede{margin:0 0 18px;color:var(--muted);font-size:13.5px;max-width:34ch}
 .group{padding:16px 0;border-top:1px solid var(--rule)}
@@ -1291,12 +1294,19 @@ const SUB_LABELS={left:'Left side',right:'Right side',back:'Back art',backTag:'B
 const subCur={side:'left',back:'back',inside:'inside'};
 const groupOf=k=>Object.keys(SUBS).find(g=>SUBS[g].includes(k));
 for(const key of['inTag','inside','under','backTag','back','right','left','front']){
-  const z=ZONES[key];if(z.fill===undefined)z.fill=null;const s=document.createElement('section');s.className='panel';s.dataset.panel=key;
+  const z=ZONES[key];if(z.fill===undefined)z.fill=null;if(z.bgTol===undefined){z.bgTol=60;z.bgHoles=false;z.bgOn=false;}const s=document.createElement('section');s.className='panel';s.dataset.panel=key;
   s.innerHTML=`<h2>${z.title}</h2><p class="lede">${z.lede}</p>
   <div class="group"><span class="label">Artwork</span>
     <div class="upload"><button class="btn primary" data-act="upload">Upload image</button><button class="btn" data-act="sample">Use sample</button><button class="btn quiet" data-act="clear">Remove</button>
     <small>PNG or SVG with a transparent background works best. You can also drop a file onto the hat.</small></div>
-    <div class="status" id="${key}-status"></div></div>
+    <div class="status" id="${key}-status"></div>
+    <div class="bgbox" id="${key}-bgbox" hidden>
+      <label class="check"><input type="checkbox" id="${key}-bgon"> Remove background <i class="bgdot" id="${key}-bgdot"></i></label>
+      <div class="slider"><label for="${key}-bgtol">Tolerance</label><output id="${key}-bgtol-out"></output>
+        <input type="range" id="${key}-bgtol" min="5" max="160" step="1"></div>
+      <label class="check"><input type="checkbox" id="${key}-bgholes"> Also clear enclosed areas, like the inside of letters</label>
+      <p class="fitnote" id="${key}-bgnote"></p>
+    </div></div>
   <div class="group"><label class="label" for="${key}-text">Or set text</label>
     <div class="textrow"><input type="text" id="${key}-text" placeholder="Type text" autocomplete="off">
       <select id="${key}-font" aria-label="Font">${Object.entries(FONTS).map(([k,f])=>`<option value="${k}">${f.label}</option>`).join('')}</select>
@@ -1339,6 +1349,10 @@ function fmt(prop,val){return prop==='rot'?`${Math.round(val)}°`:`${(+val).toFi
 function syncZoneUI(key){
   const z=ZONES[key];
   for(const p of['size','h','v','rot']){const i=$(`#${key}-${p}`);i.value=z[p];$(`#${key}-${p}-out`).textContent=fmt(p,z[p]);}
+  {const box=$(`#${key}-bgbox`);if(box){box.hidden=!(z.source==='image'&&z.imageOrig);
+    $(`#${key}-bgon`).checked=!!z.bgOn;$(`#${key}-bgholes`).checked=!!z.bgHoles;$(`#${key}-bgtol`).value=z.bgTol;$(`#${key}-bgtol-out`).textContent=z.bgTol;
+    const dot=$(`#${key}-bgdot`);dot.style.background=z.bgColor||'transparent';dot.style.display=z.bgColor?'inline-block':'none';
+    $(`#${key}-bgnote`).textContent=z.bgOn?(z.bgColor?'Removed the solid background color shown. Raise the tolerance if traces remain; lower it if parts of your design disappear.':'No solid background found to remove at this tolerance. Try raising it.'):'Turn this on to remove a solid-color background from your image.';}}
   {const FD={tag:1/1.36,patch:1/1.32,circle:1/1.12},f=z.fill||FD[z.backing]||0.76,fi=$(`#${key}-fill`);
    $(`#${key}-fillwrap`).hidden=z.backing==='none';fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
   $(`#${key}-text`).value=z.text;$(`#${key}-font`).value=z.font;$(`#${key}-tcolor`).value=z.textColor;$(`#${key}-bcolor`).value=z.backingColor;
@@ -1360,7 +1374,7 @@ panels.addEventListener('click',e=>{
   if(act==='upload'){fileTarget=key;$('#fileInput').click();}
   else if(act==='sample'){z.source='sample';z.text='';if(key==='under'||key==='inside'){z.fit='fill';z.autoFit=true;}refreshArt(key);syncZoneUI(key);}
   else if(act==='template'){const c=brimTemplate();c.toBlob(bl=>bl&&saveBlob(bl,'underbrim-template.png'),'image/png');}
-  else if(act==='clear'){z.source=null;z.text='';z.image=null;refreshArt(key);syncZoneUI(key);}
+  else if(act==='clear'){z.source=null;z.text='';z.image=null;z.imageOrig=null;refreshArt(key);syncZoneUI(key);}
   else if(act==='center'){if(key==='under')applyFit(z.fit);else if(key==='inside')applyInsideFit(z.fit);else Object.assign(z,z.defaults);syncZoneUI(key);updateUV(key);}
   else if(b.parentElement.id==='under-fit'){applyFit(b.dataset.v);syncZoneUI(key);updateUV(key);}
   else if(b.parentElement.id==='inside-fit'){applyInsideFit(b.dataset.v);syncZoneUI(key);updateUV(key);}
@@ -1369,13 +1383,16 @@ panels.addEventListener('click',e=>{
   else if(b.parentElement.id==='inside-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('inside');dirty=true;stopSpin();goView(z.which==='front'?'insideFront':'inside');}
   else if(b.dataset.sub){selectTab(b.dataset.sub,true,true);}
   else if(act==='copyside'){const other=key==='left'?'right':'left',o=ZONES[other];
-    ['size','h','v','rot','fill','backing','backingColor','source','image','imageName','text','font','textColor'].forEach(f=>o[f]=z[f]);
+    ['size','h','v','rot','fill','backing','backingColor','source','image','imageOrig','imageName','text','font','textColor','bgOn','bgTol','bgHoles','bgColor'].forEach(f=>o[f]=z[f]);
     refreshArt(other);syncZoneUI(other);toast('Copied to the '+other+' side');}
   else if(b.parentElement.id==='side-which'){z.which=b.dataset.v;syncZoneUI(key);updateVisibility('side');dirty=true;stopSpin();goView(z.which==='right'?'right':z.which==='both'?'quarter':'left');}
 });
 let textTimer=null;
 panels.addEventListener('input',e=>{
   const t=e.target;const panel=t.closest('.panel');const key=panel&&panel.dataset.panel;if(!ZONES[key])return;const z=ZONES[key];
+  if(t.id===`${key}-bgon`||t.id===`${key}-bgholes`||t.id===`${key}-bgtol`){
+    z.bgOn=$(`#${key}-bgon`).checked;z.bgHoles=$(`#${key}-bgholes`).checked;z.bgTol=+$(`#${key}-bgtol`).value;$(`#${key}-bgtol-out`).textContent=z.bgTol;
+    clearTimeout(z._bgT);z._bgT=setTimeout(()=>prepareImage(key,false),t.type==='range'?120:0);return;}
   if(t.type==='range'&&t.dataset.prop==='fill'){z.fill=parseFloat(t.value)/100;$(`#${t.id}-out`).textContent=Math.round(t.value)+'%';cancelAnimationFrame(t._raf);t._raf=requestAnimationFrame(()=>refreshArt(key));}
   else if(t.type==='range'){z[t.dataset.prop]=parseFloat(t.value);$(`#${t.id}-out`).textContent=fmt(t.dataset.prop,t.value);updateUV(key);}
   else if(t.id===`${key}-text`){z.text=t.value;clearTimeout(textTimer);textTimer=setTimeout(()=>{
@@ -1392,14 +1409,65 @@ panels.addEventListener('change',e=>{
 function loadFont(f){try{return document.fonts.load(FONTS[f].css).catch(()=>{});}catch(_){return Promise.resolve();}}
 
 /* files */
+/* ---------- background remover ----------
+   Finds a solid background color from the image's edges and removes it: everything of that color
+   connected to the edges (or every pixel of that color, if "enclosed areas" is on). Edge pixels that
+   blend into the background are made partly see-through and have the background color taken back out,
+   so artwork keeps clean, smooth edges with no white halo. */
+function removeBackground(img,tol,holes){
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;if(!iw||!ih)return null;
+  const sc=Math.min(1,2000/Math.max(iw,ih)),w=Math.max(1,Math.round(iw*sc)),h=Math.max(1,Math.round(ih*sc));
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(img,0,0,w,h);
+  const im=g.getImageData(0,0,w,h),d=im.data;
+  // background color: the most common color around the border
+  const border=[];const step=Math.max(1,Math.floor((w+h)/600));
+  for(let x=0;x<w;x+=step){border.push(x,(h-1)*w+x);}for(let y=0;y<h;y+=step){border.push(y*w,y*w+w-1);}
+  const bins=new Map();let opaque=0;
+  for(const i of border){const k=i*4;if(d[k+3]<128)continue;opaque++;const key=(d[k]>>4)<<8|(d[k+1]>>4)<<4|(d[k+2]>>4);
+    const b=bins.get(key)||[0,0,0,0];b[0]+=d[k];b[1]+=d[k+1];b[2]+=d[k+2];b[3]++;bins.set(key,b);}
+  if(opaque<border.length*0.5)return null; // edges are already transparent
+  let best=null;for(const b of bins.values())if(!best||b[3]>best[3])best=b;
+  const bg=[best[0]/best[3],best[1]/best[3],best[2]/best[3]];
+  const dist=k=>Math.abs(d[k]-bg[0])+Math.abs(d[k+1]-bg[1])+Math.abs(d[k+2]-bg[2]);
+  let match=0;for(const i of border){const k=i*4;if(d[k+3]>=128&&dist(k)<=tol)match++;}
+  if(match<opaque*0.55)return null; // not a solid background
+  const rm=new Uint8Array(w*h);
+  if(holes){for(let i=0;i<w*h;i++)if(d[i*4+3]>=8&&dist(i*4)<=tol)rm[i]=1;}
+  else{const q=new Int32Array(w*h);let qh=0,qt=0;
+    const push=i=>{if(rm[i])return;const k=i*4;if(dist(k)<=tol){rm[i]=1;q[qt++]=i;}};
+    for(let x=0;x<w;x++){push(x);push((h-1)*w+x);}for(let y=0;y<h;y++){push(y*w);push(y*w+w-1);}
+    while(qh<qt){const i=q[qh++],x=i%w;if(x>0)push(i-1);if(x<w-1)push(i+1);if(i>=w)push(i-w);if(i<w*(h-1))push(i+w);}}
+  let removed=0;
+  for(let i=0;i<w*h;i++){
+    const k=i*4;
+    if(rm[i]){d[k+3]=0;removed++;continue;}
+    const x=i%w,near=(x>0&&rm[i-1])||(x<w-1&&rm[i+1])||(i>=w&&rm[i-w])||(i<w*(h-1)&&rm[i+w]);
+    if(!near)continue;
+    const dd=dist(k);if(dd>tol*2.2)continue;
+    const a=Math.max(0.05,Math.min(1,(dd-tol)/(tol*1.2)));
+    for(let ch=0;ch<3;ch++)d[k+ch]=Math.max(0,Math.min(255,(d[k+ch]-(1-a)*bg[ch])/a));
+    d[k+3]=Math.round(d[k+3]*a);
+  }
+  if(removed<w*h*0.02)return null;
+  g.putImageData(im,0,0);
+  return{canvas:trimAlpha(c),color:rgbToHex(...bg)};
+}
+// Turn the uploaded original into what goes on the hat: background removal, then any spot-specific fitting
+function prepareImage(key,isNew){
+  const z=ZONES[key],orig=z.imageOrig;if(!orig)return;
+  let out=orig;z.bgColor=null;
+  if(isNew){const r=removeBackground(orig,z.bgTol,z.bgHoles);z.bgOn=!!r;z.bgFound=!!r;if(r){out=r.canvas;z.bgColor=r.color;}}
+  else if(z.bgOn){const r=removeBackground(orig,z.bgTol,z.bgHoles);if(r){out=r.canvas;z.bgColor=r.color;}}
+  if(key==='under'){const r=processUnderImage(out);z.image=r.canvas;z.fit=r.fit;z.note=r.note;z.autoFit=true;}
+  else{z.image=out;if(key==='inside'&&isNew){z.fit='fill';z.autoFit=true;}}
+  refreshArt(key);syncZoneUI(key);
+}
 function loadFile(file,key){
   if(!file||!/^image\//.test(file.type)){toast('That file isn’t an image. Use a PNG, JPG, SVG, or WebP.');return;}
   const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{
-      const z=ZONES[key];z.imageName=file.name;z.source='image';z.text='';
-      if(key==='under'){const r=processUnderImage(img);z.image=r.canvas;z.fit=r.fit;z.note=r.note;z.autoFit=true;}
-      else if(key==='inside'){z.image=img;z.fit='fill';z.autoFit=true;}
-      else z.image=img;
-      refreshArt(key);syncZoneUI(key);
+      const z=ZONES[key];z.imageName=file.name;z.source='image';z.text='';z.imageOrig=img;
+      prepareImage(key,true);
+      if(z.bgOn)toast('Removed the background from '+file.name);
       if(activeTab!==key)selectTab(key,true,true);};
     img.onerror=()=>toast('That image couldn’t be read. Try exporting it as PNG.');img.src=rd.result;};
   rd.readAsDataURL(file);
@@ -1688,7 +1756,7 @@ async function saveBlob(blob,filename){
 
 /* ---------- saved designs ---------- */
 const ZONE_KEYS=['front','left','right','back','backTag','under','inside','inTag'];
-const ZONE_FIELDS=['size','h','v','rot','fill','backing','backingColor','source','text','font','textColor','which','fit','note','imageName'];
+const ZONE_FIELDS=['size','h','v','rot','fill','backing','backingColor','source','text','font','textColor','which','fit','note','imageName','bgOn','bgTol','bgHoles','bgColor'];
 function imageToDataURL(img){
   if(!img)return null;const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;
   const sc=Math.min(1,2000/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);
@@ -1710,7 +1778,7 @@ async function restoreDesign(d){
   $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
   for(const k of ZONE_KEYS){const z=ZONES[k],o=d.zones[k];if(!o)continue;
     ZONE_FIELDS.forEach(f=>{if(o[f]!==undefined)z[f]=o[f];});
-    z.image=o.image?await loadImg(o.image):null;
+    z.image=o.image?await loadImg(o.image):null;z.imageOrig=z.image;
     if(z.source==='image'&&!z.image)z.source=null;
     z.autoFit=false;refreshArt(k);syncZoneUI(k);}
   Object.assign(tapeText,{text:'',color:'#1F2225',font:'sans',repeat:false,flip:false},d.tapeText||{});syncTapeUI();
@@ -1791,9 +1859,9 @@ const imgIds=new WeakMap();let imgSeq=0;
 const imgId=i=>{if(!i)return 0;if(!imgIds.has(i))imgIds.set(i,++imgSeq);return imgIds.get(i);};
 function takeSnap(){
   const zones={};
-  for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=z.image;zones[k]=o;}
+  for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=z.image;o.imageOrig=z.imageOrig;zones[k]=o;}
   const snap={colors:{...colors},perforated,ropeOn,zones,tapeText:{...tapeText}};
-  snap.sig=JSON.stringify(snap,(key,val)=>key==='image'?imgId(val):val);
+  snap.sig=JSON.stringify(snap,(key,val)=>key==='image'||key==='imageOrig'?imgId(val):val);
   return snap;
 }
 let undoCurrent=null;
@@ -1809,7 +1877,7 @@ function applySnap(sn){
   try{
     Object.assign(colors,sn.colors);perforated=sn.perforated;ropeOn=sn.ropeOn;
     $('#perfToggle').checked=perforated;$('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;
-    for(const k of ZONE_KEYS){const z=ZONES[k],o=sn.zones[k];ZONE_FIELDS.forEach(f=>{if(o[f]!==undefined)z[f]=o[f];});z.image=o.image;z.autoFit=false;refreshArt(k);syncZoneUI(k);}
+    for(const k of ZONE_KEYS){const z=ZONES[k],o=sn.zones[k];ZONE_FIELDS.forEach(f=>{if(o[f]!==undefined)z[f]=o[f];});z.image=o.image;z.imageOrig=o.imageOrig;z.autoFit=false;refreshArt(k);syncZoneUI(k);}
     Object.assign(tapeText,sn.tapeText);syncTapeUI();
     applyColors();syncColorUI();dirty=true;
   }finally{undoBusy=false;}

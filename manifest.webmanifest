@@ -8,7 +8,7 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
-  "background_color": "#E3E4E6",
+  "background_color": "#060708",
   "theme_color": "#1E6B4A",
   "categories": ["design", "productivity", "graphics"],
   "icons": [

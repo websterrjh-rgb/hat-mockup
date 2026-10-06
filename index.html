@@ -374,7 +374,7 @@ const CAMP_INSIDE=(CAMP||DAD||BUCKET)?'#1F2225':null; // camp caps use black bin
 const ZONES={
   front:{title:'Front art',lede:'The main logo, centered on the front panel.',
     size:CAMP?5.5:BUCKET?5:6.5,h:0,v:CAMP?2.9:BUCKET?3.4:4.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#1F2225',
-    ranges:{size:[2,11],h:[-6,6],v:[1,9]},labels:{h:'Left to right',v:'Up and down'},view:'front'},
+    onBrim:false,ranges:{size:[2,14],h:[-6,6],v:[-6,9]},labels:{h:'Left to right',v:'Up and down'},view:'front'},
   left:{title:'Left side',lede:'A patch or mark on the wearer’s left side panel. Each side has its own art and placement.',
     size:3.2,h:-0.15,v:2.1,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'script',textColor:'#1F2225',
     ranges:{size:[1.5,8],h:[-6,8],v:[0.6,8]},labels:{h:'Front to back',v:'Up and down'},view:'left'},
@@ -1132,6 +1132,13 @@ const DECALS={
   inTag:[{d:decalMesh(inTagGeo,THREE.DoubleSide),side:'band'}]
 };
 const zMid=(zMin+zMax)/2;
+// Front art can continue from the crown down onto the top of the brim. On the brim it is laid out as if the
+// bill were unrolled flat below the front panel: across = the bill's flat width, down = distance from the crown.
+{const g=brimGeo(BT+0.03,true),d=decalMesh(g,THREE.FrontSide);let k=0;
+  for(let j=0;j<=NW;j++)for(let i=0;i<=NB;i++,k++){const th=-THB+2*THB*i/NB,f=brimFlat(th,j/NW);
+    d.base[3*k]=Math.cos(th)>0.15?f[0]:1e4; // only the front of the brim (matters on the bucket's all-around brim)
+    d.base[3*k+1]=-f[2]*(j/NW);d.base[3*k+2]=0;}
+  DECALS.front.push({d,side:'frontBrim'});}
 {const b=DECALS.inTag[0].d.base,f=inTagGeo.userData.flat;for(let k=0;k<f.length;k++)b[k]=f[k];}
 // Unwrap the inside front panels into flat pattern coordinates (cm across from the center seam, cm up from the brim),
 // so a print fills them edge to edge the way it would be printed on the flat panel before sewing.
@@ -1162,7 +1169,7 @@ function updateUV(key){
     const p=d.base,uv=d.mesh.geometry.attributes.uv;
     for(let i=0;i<uv.count;i++){
       const x=p[3*i],y=p[3*i+1],zz=p[3*i+2];let lx,ly;
-      if(side==='front'){lx=x-z.h;ly=y-z.v;}
+      if(side==='front'||side==='frontBrim'){lx=x-z.h;ly=y-z.v;}
       else if(side==='left'){lx=-(zz+z.h);ly=y-z.v;}
       else if(side==='right'){lx=zz+z.h;ly=y-z.v;}
       else if(side==='back'){lx=-(x+z.h);ly=y-z.v;}       // seen from behind: viewer's right is -x
@@ -1181,6 +1188,7 @@ function updateVisibility(key){
   const z=ZONES[key],has=!!z.tex;
   for(const {d,side} of DECALS[key]){
     let vis=has;
+    if(side==='frontBrim')vis=has&&!!z.onBrim;
     if(key==='inside')vis=has&&((z.which==='front')===(side==='inFront'));
     d.mesh.visible=vis;
   }
@@ -1588,6 +1596,7 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
   ${key==='under'?`<div class="group"><span class="label">Fit</span><div class="seg" id="under-fit"><button data-v="shape">Match brim shape</button><button data-v="fill">Fill brim</button><button data-v="free">Free</button></div>
     <p class="fitnote" id="under-fitnote"></p>
     <div class="actions"><button class="btn quiet" data-act="template" id="templateBtn">Download brim template</button></div></div>`:''}
+  ${key==='front'?`<div class="group"><span class="label">Brim</span><label class="check" style="margin-top:0"><input type="checkbox" id="front-onbrim"> Let the art run down onto the brim</label><p class="fitnote">Move the art down with the Up and down slider, or make it larger, and it continues from the front panel onto the top of the bill.</p></div>`:''}
   ${key==='back'?`<div class="group"><span class="label">Closure colors</span><div class="colorgrid">
       <label><input type="color" data-color="strap"> Snap strap</label><label><input type="color" data-color="binding"> Binding tape</label></div></div>`:''}
   ${key==='inside'?`<div class="group"><span class="label">Inside colors</span><div class="colorgrid">
@@ -1632,6 +1641,7 @@ function syncZoneUI(key){
   $(`#${key}-text`).value=z.text;$(`#${key}-font`).value=z.font;$(`#${key}-tcolor`).value=z.textColor;$(`#${key}-bcolor`).value=z.backingColor;
   $$(`#${key}-backing button`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.backing)));
   if(key==='under'){$$('#under-fit button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.fit)));$('#under-fitnote').textContent=FIT_NOTES[z.fit];}
+  if(key==='front'){const ob=$('#front-onbrim');if(ob)ob.checked=!!z.onBrim;}
   if(key==='inside'){$$('#inside-fit button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.fit)));$('#inside-fitnote').textContent=z.fit==='fill'?'Your image covers both inside front panels edge to edge, from the brim to the button, without stretching. Anything past the panels is cropped.':'Place and size the image yourself.';}
   if(key==='inside')$$('#inside-which button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.which)));
   if(key==='side')$$('#side-which button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.which)));
@@ -1664,6 +1674,7 @@ panels.addEventListener('click',e=>{
 let textTimer=null;
 panels.addEventListener('input',e=>{
   const t=e.target;const panel=t.closest('.panel');const key=panel&&panel.dataset.panel;if(!ZONES[key])return;const z=ZONES[key];
+  if(t.id==='front-onbrim'){z.onBrim=t.checked;updateVisibility('front');updateUV('front');dirty=true;return;}
   if(t.id===`${key}-bgon`||t.id===`${key}-bgholes`||t.id===`${key}-bgtol`){
     z.bgOn=$(`#${key}-bgon`).checked;z.bgHoles=$(`#${key}-bgholes`).checked;z.bgTol=+$(`#${key}-bgtol`).value;$(`#${key}-bgtol-out`).textContent=z.bgTol;
     clearTimeout(z._bgT);z._bgT=setTimeout(()=>prepareImage(key,false),t.type==='range'?120:0);return;}
@@ -2199,7 +2210,7 @@ async function saveBlob(blob,filename){
 
 /* ---------- saved designs ---------- */
 const ZONE_KEYS=['front','left','right','back','backTag','under','inside','inTag'];
-const ZONE_FIELDS=['size','h','v','rot','fill','backing','backingColor','source','text','font','textColor','which','fit','note','imageName','bgOn','bgTol','bgHoles','bgColor'];
+const ZONE_FIELDS=['size','h','v','rot','fill','onBrim','backing','backingColor','source','text','font','textColor','which','fit','note','imageName','bgOn','bgTol','bgHoles','bgColor'];
 function imageToDataURL(img){
   if(!img)return null;const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)return null;
   const sc=Math.min(1,2000/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*sc);c.height=Math.round(h*sc);

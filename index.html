@@ -418,7 +418,7 @@ const rim=new THREE.DirectionalLight(0xffffff,0.22);rim.position.set(0,-10,6);sc
 /* ---------- crown geometry ---------- */
 const A=8.1,B=10.0,H=CAMP?10.0:TRUCK?10.5:SIX?11.0:DAD?9.4:BUCKET?8.0:9.5;
 // Seam angles (front = 0). Front panel spans +/-1.18 rad, then four equal panels.
-const SEAM_TH=BUCKET?[1.2,2.2,Math.PI]:CAMP?[0.8,Math.PI-0.75,Math.PI]:(TRUCK||DAD)?[1.05,2.09,Math.PI]:SIX?[0.8,1.95,Math.PI]:[1.18,2.16,Math.PI];
+const SEAM_TH=BUCKET?[1.2,2.2,Math.PI]:CAMP?[0.8,Math.PI-0.75,Math.PI]:(TRUCK||DAD)?[1.05,2.09,Math.PI]:SIX?[0.95,2.0,Math.PI]:[1.18,2.16,Math.PI];
 // Camp cap seams, in (angle around the crown, height parameter a): the front panel is bounded by an arch,
 // the side panels by a rounded top edge, and the two crown panels meet down the middle.
 const CAMP_F=0.8,CAMP_BK=Math.PI-0.75;
@@ -426,7 +426,7 @@ const CAMP_F=0.8,CAMP_BK=Math.PI-0.75;
 function aForHeight(th,y){let lo=0,hi=1;for(let i=0;i<24;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;}
 // 6-panel: the front panel stops under an arched seam; a top panel fills the rest up to the button
 let BUCKET_TOP=1; // where the bucket's side band meets the top panel (set once the crown shape exists)
-const sixArch=th=>aForHeight(th,H*(0.665+0.105*Math.cos(Math.min(1,Math.abs(th)/SEAM_TH[0])*Math.PI/2)));
+const sixArch=th=>aForHeight(th,H*(0.42+0.14*Math.cos(Math.min(1,Math.abs(th)/SEAM_TH[0])*Math.PI/2)));
 const campArch=th=>aForHeight(th,5.8+1.1*Math.cos(Math.min(1,Math.abs(th)/CAMP_F)*Math.PI/2));
 const campSideTop=th=>{const t=Math.min(1,Math.max(0,(Math.abs(th)-CAMP_F)/(CAMP_BK-CAMP_F)));return aForHeight(th,5.8+2.2*Math.pow(Math.sin(Math.PI*t),0.7));};
 let CENTER_A=2; // where the partial front seam stops (a-param); set below

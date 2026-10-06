@@ -196,7 +196,7 @@ body.viewer .stage{height:100%}
         <p class="lede">Pick the cap style, then a colorway, then fine-tune each part of the cap.</p>
         <div class="group">
           <span class="label">Cap style</span>
-          <div class="seg" id="styleSeg"><button data-style="5panel">5-panel</button><button data-style="camp">Camp cap</button><button data-style="trucker">Trucker</button><button data-style="sixpanel">6-panel</button><button data-style="flat">Flat brim</button><button data-style="dad">Dad hat</button><button data-style="bucket">Bucket hat</button></div>
+          <div class="seg" id="styleSeg"><button data-style="5panel">5-panel</button><button data-style="camp">Camp cap</button><button data-style="trucker">Trucker</button><button data-style="sixpanel">6-panel</button><button data-style="flat">Flat brim</button><button data-style="dad">Dad hat</button><button data-style="bucket">Bucket hat</button><button data-style="visor">Low visor</button><button data-style="hvisor">High visor</button></div>
           <p class="fitnote" id="styleNote"></p>
         </div>
         <div class="group">
@@ -281,6 +281,16 @@ body.viewer .stage{height:100%}
         <span class="card-title">Bucket hat</span>
         <span class="card-sub">Tapered crown with a perforated band and an all-around brim</span>
       </button>
+      <button class="style-card" data-pick="visor">
+        <img class="card-img" src="data:image/jpeg;base64,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">
+        <span class="card-title">Low crown visor</span>
+        <span class="card-sub">An open-top band with a curved bill and a hook-and-loop strap</span>
+      </button>
+      <button class="style-card" data-pick="hvisor">
+        <img class="card-img" src="data:image/jpeg;base64,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">
+        <span class="card-title">High crown visor</span>
+        <span class="card-sub">A tall, seamless band with a curved bill and an adjustable strap</span>
+      </button>
     </div>
     <section class="welcome-saved" id="welcomeSaved" hidden>
       <h2>Open a saved design</h2>
@@ -331,7 +341,7 @@ const colors={crown:'#F3F3F1',brim:'#1F2225',under:'#1F2225',button:'#1F2225',st
   binding:null,lining:null,tape:null,sweat:null,stitchCrown:null,stitchBrim:null,mesh:'#EEEAE0'}; // null = follows the fabric color
 function eff(k){if(colors[k])return colors[k];const c=colors.crown,d=isDark(c);
   if(k.startsWith('p_'))return(TRUCK&&MESH_PANELS.includes(k))?colors.mesh:c;
-  if(k==='stitchCrown')return FLAT?shade(c,d?0.16:-0.2):shade(c,d?0.28:-0.3); // the flat brim's stitching is tone-on-tone
+  if(k==='stitchCrown')return(FLAT||VISOR)?shade(c,d?0.16:-0.2):shade(c,d?0.28:-0.3); // the flat brim's stitching is tone-on-tone
   if(k==='stitchBrim')return shade(colors.brim,isDark(colors.brim)?0.2:-0.2);
   if(k==='binding')return shade(c,d?0.07:-0.07);if(k==='tape')return shade(c,d?0.08:-0.04);return c;}
 const PRESETS=[
@@ -347,11 +357,13 @@ const PRESETS=[
 let STYLE='5panel';try{STYLE=sessionStorage.getItem('capStyle')||'5panel';}catch(e){}
 let RESUMING=false;try{RESUMING=sessionStorage.getItem('capResume')==='1';sessionStorage.removeItem('capResume');}catch(e){}
 if(RESUMING)document.getElementById('welcome').hidden=true;
-if(!['camp','trucker','sixpanel','flat','dad','bucket'].includes(STYLE))STYLE='5panel';
-const CAMP=STYLE==='camp',TRUCK=STYLE==='trucker',SIX=STYLE==='sixpanel',FLAT=STYLE==='flat',DAD=STYLE==='dad',BUCKET=STYLE==='bucket';
-let perforated=!CAMP&&!TRUCK&&!DAD&&!FLAT;
+if(!['camp','trucker','sixpanel','flat','dad','bucket','visor','hvisor'].includes(STYLE))STYLE='5panel';
+const CAMP=STYLE==='camp',TRUCK=STYLE==='trucker',SIX=STYLE==='sixpanel',FLAT=STYLE==='flat',DAD=STYLE==='dad',BUCKET=STYLE==='bucket',HV=STYLE==='hvisor',VISOR=STYLE==='visor'||HV; // HV: high crown visor (shares the visor build)
+let perforated=!CAMP&&!TRUCK&&!DAD&&!FLAT&&!VISOR;
 // Crown panels for each style: [color key, label, region]. "Left" and "right" are the wearer's.
-const PANELS=BUCKET?[['p_lside','Left half'],['p_rside','Right half'],['p_top','Top']]
+const PANELS=HV?[['p_lside','Left half'],['p_rside','Right half']]
+  :VISOR?[['p_front','Front'],['p_lside','Left side'],['p_rside','Right side']]
+  :BUCKET?[['p_lside','Left half'],['p_rside','Right half'],['p_top','Top']]
   :DAD?[['p_lfront','Front left'],['p_rfront','Front right'],['p_lside','Left side'],['p_rside','Right side'],['p_lback','Left back'],['p_rback','Right back']]
   :SIX?[['p_front','Front'],['p_top','Top front'],['p_lside','Left side'],['p_rside','Right side'],['p_lback','Left back'],['p_rback','Right back']]
   :CAMP?[['p_front','Front'],['p_lside','Left side'],['p_rside','Right side'],['p_ltop','Left crown'],['p_rtop','Right crown']]
@@ -363,14 +375,16 @@ Object.assign(colors,PANEL_RESET);
 if(BUCKET)Object.assign(colors,{crown:'#F4F4F2',brim:'#F4F4F2',under:'#F4F4F2',tape:'#1F2225',sweat:'#1F2225'});
 if(DAD)Object.assign(colors,{crown:'#5A1F2B',brim:'#5A1F2B',under:'#5A1F2B',button:'#5A1F2B',strap:'#5A1F2B',rope:'#F2EFE8',tape:'#1F2225',sweat:'#1F2225'});
 if(SIX)Object.assign(colors,{crown:'#F4F4F2',brim:'#F4F4F2',under:'#B9BBBE',button:'#F4F4F2',strap:'#E9E6E0'});
+if(VISOR)Object.assign(colors,{crown:'#1F2225',brim:'#1F2225',under:'#1F2225',button:'#1F2225',strap:'#1F2225',tape:'#1F2225',sweat:'#8E9399'});
+if(HV)Object.assign(colors,{crown:'#F4F4F2',brim:'#F4F4F2',under:'#1F2225',strap:'#F4F4F2',tape:'#1F2225',sweat:'#1F2225'});
 if(FLAT)Object.assign(colors,{crown:'#1F2225',brim:'#1F2225',under:'#1F2225',button:'#1F2225',strap:'#1F2225',tape:'#1F2225',sweat:'#1F2225'});
 if(TRUCK)Object.assign(colors,{crown:'#D8D4CB',brim:'#D8D4CB',under:'#D8D4CB',button:'#D8D4CB',strap:'#E7E1D4',mesh:'#EEEAE0'});
 if(CAMP)Object.assign(colors,{crown:'#2E56C9',brim:'#2E56C9',under:'#2E56C9',button:'#2E56C9',strap:'#1F2225',tape:'#1F2225',sweat:'#1F2225'});
-const CAMP_INSIDE=(CAMP||DAD||BUCKET||FLAT)?'#1F2225':null; // camp caps use black binding and seam tape inside
+const CAMP_INSIDE=(CAMP||DAD||BUCKET||FLAT||VISOR)?'#1F2225':null; // camp caps use black binding and seam tape inside
 
 const ZONES={
   front:{title:'Front art',lede:'The main logo, centered on the front panel.',
-    size:CAMP?5.5:BUCKET?5:6.5,h:0,v:CAMP?2.9:BUCKET?3.4:4.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#1F2225',
+    size:CAMP?5.5:BUCKET?5:VISOR?(HV?5:4.2):6.5,h:0,v:CAMP?2.9:BUCKET?3.4:VISOR?(HV?4.1:3.0):4.6,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'sans',textColor:'#1F2225',
     onBrim:false,ranges:{size:[2,14],h:[-6,6],v:[-6,9]},labels:{h:'Left to right',v:'Up and down'},view:'front'},
   left:{title:'Left side',lede:'A patch or mark on the wearer’s left side panel. Each side has its own art and placement.',
     size:3.2,h:-0.15,v:2.1,rot:0,backing:'none',backingColor:'#F4F4F2',source:null,image:null,text:'',font:'script',textColor:'#1F2225',
@@ -422,9 +436,9 @@ const fill=new THREE.DirectionalLight(0xffffff,0.32);fill.position.set(-12,6,-8)
 const rim=new THREE.DirectionalLight(0xffffff,0.22);rim.position.set(0,-10,6);scene.add(rim);
 
 /* ---------- crown geometry ---------- */
-const A=8.1,B=10.0,H=CAMP?10.0:TRUCK?10.5:SIX?10.3:FLAT?10.4:DAD?9.4:BUCKET?8.0:9.5;
+const A=8.1,B=10.0,H=VISOR?(HV?8.2:6.0):CAMP?10.0:TRUCK?10.5:SIX?10.3:FLAT?10.4:DAD?9.4:BUCKET?8.0:9.5;
 // Seam angles (front = 0). Front panel spans +/-1.18 rad, then four equal panels.
-const SEAM_TH=BUCKET?[1.2,2.2,Math.PI]:CAMP?[0.8,Math.PI-0.75,Math.PI]:(TRUCK||DAD||FLAT)?[1.05,2.09,Math.PI]:SIX?[0.92,1.95,Math.PI]:[1.18,2.16,Math.PI];
+const SEAM_TH=VISOR?[1.22,2.3,Math.PI]:BUCKET?[1.2,2.2,Math.PI]:CAMP?[0.8,Math.PI-0.75,Math.PI]:(TRUCK||DAD||FLAT)?[1.05,2.09,Math.PI]:SIX?[0.92,1.95,Math.PI]:[1.18,2.16,Math.PI];
 // Camp cap seams, in (angle around the crown, height parameter a): the front panel is bounded by an arch,
 // the side panels by a rounded top edge, and the two crown panels meet down the middle.
 const CAMP_F=0.8,CAMP_BK=Math.PI-0.75;
@@ -441,6 +455,11 @@ let CENTER_A=2; // where the partial front seam stops (a-param); set below
 // so the surfaces that carry it are built without the seam grooves.
 let SKIP_GROOVE=false;
 function panelShape(th,a){
+  if(HV)return 0; // high visor: one smooth, seamless band
+  if(VISOR){ // low band: a structured front panel and two side panels, seams at the temples
+    const at=Math.abs(th),S=SEAM_TH[0],dm=Math.abs(at-S),frac=at<S?(th+S)/(2*S):(at-S)/(Math.PI-S);
+    return (at<S?0.06:0.05)*Math.sin(Math.PI*Math.min(1,frac))-(SKIP_GROOVE?0:0.12*Math.exp(-(dm/0.02)*(dm/0.02)));
+  }
   if(CAMP||BUCKET)return 0; // soft camp cap / bucket: flat-felled seams, no panel puff
   th=Math.atan2(Math.sin(th),Math.cos(th)); // wrap to (-180°, 180°] so both back panels match
   if(DAD){ // unstructured: soft panels that sag between the seams, a front that caves in a little, gentle wrinkles
@@ -473,7 +492,7 @@ function panelShape(th,a){
 /* Crown shape, matched to the reference photos: every meridian runs from the base edge up to the button.
    The front meridian is the A-frame profile (a straight front panel leaning back, a rounded corner,
    then a straight slope up to the button set back near mid-crown); sides and back are rounded arches. */
-const ZA=BUCKET?0:CAMP?-0.9:TRUCK?0.1:SIX?-0.45:FLAT?-0.2:DAD?-0.6:0.75; // top of the crown (button position on the 5-panel), front-to-back (base runs from z=+10 to z=-10)
+const ZA=HV?-6:(BUCKET||VISOR)?0:CAMP?-0.9:TRUCK?0.1:SIX?-0.45:FLAT?-0.2:DAD?-0.6:0.75; // top of the crown (button position on the 5-panel), front-to-back (base runs from z=+10 to z=-10)
 const PN=400;
 function resampleProfile(pts){
   const d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
@@ -522,9 +541,11 @@ function bucketProfile(){
   for(let i=1;i<=200;i++){const t=i/200;p.push([b[0]+(P3[0]-b[0])*t,1]);}
   return resampleProfile(p);
 }
-const PROF_FRONT=BUCKET?bucketProfile():DAD?resampleProfile(DAD_FRONT):TRUCK?archProfile(3.0):resampleProfile(CAMP?CAMP_FRONT:SIX?SIX_FRONT:FLAT?FLAT_FRONT:REF_FRONT),
-      PROF_SIDE=BUCKET?bucketProfile():DAD?archProfile(2.3):CAMP?resampleProfile(CAMP_SIDE):SIX?resampleProfile(SIX_SIDE):FLAT?resampleProfile(FLAT_SIDE):archProfile(2.6),
-      PROF_BACK=BUCKET?bucketProfile():DAD?resampleProfile(DAD_BACK):TRUCK?archProfile(2.3):resampleProfile(CAMP?CAMP_BACK:SIX?SIX_BACK:FLAT?FLAT_BACK:REF_BACK); // trucker: classic rounded six-panel crown
+// visor: no crown top, just an upright band that leans in slightly toward its top edge
+const VISOR_PROF=HV?[[1,0],[0.925,0.5],[0.85,1]]:[[1,0],[0.985,0.5],[0.96,1]]; // high visor: leans back over the forehead
+const PROF_FRONT=VISOR?resampleProfile(VISOR_PROF):BUCKET?bucketProfile():DAD?resampleProfile(DAD_FRONT):TRUCK?archProfile(3.0):resampleProfile(CAMP?CAMP_FRONT:SIX?SIX_FRONT:FLAT?FLAT_FRONT:REF_FRONT),
+      PROF_SIDE=VISOR?resampleProfile(VISOR_PROF):BUCKET?bucketProfile():DAD?archProfile(2.3):CAMP?resampleProfile(CAMP_SIDE):SIX?resampleProfile(SIX_SIDE):FLAT?resampleProfile(FLAT_SIDE):archProfile(2.6),
+      PROF_BACK=VISOR?resampleProfile(VISOR_PROF):BUCKET?bucketProfile():DAD?resampleProfile(DAD_BACK):TRUCK?archProfile(2.3):resampleProfile(CAMP?CAMP_BACK:SIX?SIX_BACK:FLAT?FLAT_BACK:REF_BACK); // trucker: classic rounded six-panel crown
 function profAt(tbl,a){const f=Math.max(0,Math.min(1,a))*PN,i=Math.min(PN-1,Math.floor(f)),k=f-i;return[tbl[i][0]+(tbl[i+1][0]-tbl[i][0])*k,tbl[i][1]+(tbl[i+1][1]-tbl[i][1])*k];}
 function profileST(th,a){
   const c=Math.cos(th),wf=c>0?c*c:0,wb=c<0?c*c:0;
@@ -532,12 +553,14 @@ function profileST(th,a){
   const sx=S[0]*(1-wb)+K[0]*wb,sy=S[1]*(1-wb)+K[1]*wb;
   return[F[0]*wf+sx*(1-wf),F[1]*wf+sy*(1-wf)];
 }
+// visor band height, as a fraction of the front height: tall over the forehead, tapering lower toward the back strap
+function visorH(th){const c=(1+Math.cos(th))/2;return HV?0.42+0.58*Math.pow(c,1.1):0.5+0.5*Math.pow(c,0.9);}
 function crownPoint(th,a){
   const st=profileST(th,a),s=st[0];
   const dx=A*Math.sin(th),dz=B*Math.cos(th)-ZA;
   let nx=Math.sin(th)/A,nz=Math.cos(th)/B;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
   const off=panelShape(th,a)*s;
-  return[dx*s+nx*off,H*st[1],ZA+dz*s+nz*off];
+  return[dx*s+nx*off,H*st[1]*(VISOR?visorH(th):1),ZA+dz*s+nz*off];
 }
 function crownS(a){return profAt(PROF_SIDE,a)[0];}
 function aAtHeight(th,y){for(let k=0;k<=PN;k++){if(crownPoint(th,k/PN)[1]>=y)return k/PN;}return 1;}
@@ -564,6 +587,7 @@ const crownGeo=gridGeometry(-Math.PI,Math.PI,NTH,NA,1);
   for(let j=0;j<=NA;j++){const i0=j*W,i1=j*W+NTH;
     v.set(n.getX(i0)+n.getX(i1),n.getY(i0)+n.getY(i1),n.getZ(i0)+n.getZ(i1)).normalize();
     n.setXYZ(i0,v.x,v.y,v.z);n.setXYZ(i1,v.x,v.y,v.z);}
+  if(VISOR){n.needsUpdate=true;return;} // open top: keep the band's own normals
   w.set(0,0,0);const top=NA*W;
   for(let i=0;i<=NTH;i++)w.add(new THREE.Vector3(n.getX(top-W+i),n.getY(top-W+i),n.getZ(top-W+i)));
   w.set(w.x*0.15,1,w.z*0.15).normalize();
@@ -581,9 +605,13 @@ const insideCanvas=document.createElement('canvas');insideCanvas.width=CW;inside
 const insideTex=new THREE.CanvasTexture(insideCanvas);insideTex.encoding=THREE.sRGBEncoding;insideTex.anisotropy=maxAniso;
 const liningMat=new THREE.MeshStandardMaterial({map:insideTex,roughness:0.9,metalness:0,side:THREE.BackSide,alphaTest:0.5});
 scene.add(new THREE.Mesh(crownGeo,liningMat));
+// visor: the open top edge is turned and stitched, so give it a little thickness
+const visorEdgeMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.86});
+if(VISOR){const lim=Math.PI-0.62-0.02,pts=[];for(let k=0;k<=160;k++){const th=-lim+2*lim*k/160,q=crownPoint(th,1);pts.push(new THREE.Vector3(q[0],q[1]-0.05,q[2]));}
+  const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),320,HV?0.13:0.085,10,false),visorEdgeMat);m.castShadow=true;scene.add(m);}
 
 const SEAMS=[SEAM_TH[0],-SEAM_TH[0],SEAM_TH[1],-SEAM_TH[1]];
-const OPEN_W=BUCKET?0:CAMP?0.42:FLAT?0.53:0.48,OPEN_P=2.8,OPEN_A=aAtHeight(Math.PI,CAMP?4.0:FLAT?4.8:4.2);
+const OPEN_W=BUCKET?0:VISOR?0.62:CAMP?0.42:FLAT?0.53:0.48,OPEN_P=VISOR?3.6:2.8,OPEN_A=VISOR?1.02:aAtHeight(Math.PI,CAMP?4.0:FLAT?4.8:4.2);
 function archA(d,W,A0){return d>=W?0:A0*Math.pow(1-Math.pow(d/W,OPEN_P),1/OPEN_P);}
 function openA(d){return archA(d,OPEN_W,OPEN_A);}
 const uX=th=>(th+Math.PI)/TAU*CW, aY=a=>(1-a)*CH;
@@ -610,6 +638,9 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
       if(pc('p_front')){g.fillStyle=pc('p_front');g.beginPath();g.moveTo(uX(-CAMP_F),CH);curve(th=>[uX(th),aY(campArch(th))],-CAMP_F,CAMP_F);g.lineTo(uX(CAMP_F),CH);g.closePath();g.fill();}
       else if(pc('p_ltop')||pc('p_rtop')){ // keep the front panel in the crown color under recolored crown panels
         g.fillStyle=base;g.beginPath();g.moveTo(uX(-CAMP_F),CH);curve(th=>[uX(th),aY(campArch(th))],-CAMP_F,CAMP_F);g.lineTo(uX(CAMP_F),CH);g.closePath();g.fill();}
+    }else if(VISOR){
+      if(pc('p_front'))band(-SEAM_TH[0],SEAM_TH[0],pc('p_front'));
+      const s0=HV?0:SEAM_TH[0];for(const sg of[1,-1]){const sd=pc(sg>0?'p_lside':'p_rside');if(sd)band(sg*s0,sg*Math.PI,sd);}
     }else if(SIX){
       const archPath=()=>{for(let i=0;i<=60;i++){const th=-SEAM_TH[0]+2*SEAM_TH[0]*i/60;g.lineTo(uX(th),aY(sixArch(th)));}};
       if(pc('p_top'))band(-SEAM_TH[0],SEAM_TH[0],pc('p_top'));
@@ -653,7 +684,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
         const k=Math.floor((th+Math.PI)/(dth*7))%2;if(k&&row%3===1)continue; // breaks the rows into a diamond rhythm
         g.beginPath();g.ellipse(uX(th),aY(a),rx,ry,0,0,TAU);g.fill();}}
   }
-  if(perforated&&!TRUCK&&!BUCKET){
+  if(perforated&&!TRUCK&&!BUCKET&&!VISOR){
     g.fillStyle=SIX?(dark?'rgba(0,0,0,0.7)':'rgba(0,0,0,0.62)'):dark?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.3)';
     const pitch=SIX?0.5:0.56,r=SIX?0.1:0.12,da=pitch/PROFILE_CM*(SIX?0.9:1.0);
     // the 6-panel's laser-cut holes are teardrops with the point up, as in the reference photos
@@ -675,7 +706,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     }
   }
   // seams + stitching
-  const groove=shade(base,dark?-0.38:-0.2),stitch=colors.stitchCrown||(FLAT?shade(base,dark?0.16:-0.2):shade(base,dark?0.28:-0.3));
+  const groove=shade(base,dark?-0.38:-0.2),stitch=colors.stitchCrown||((FLAT||VISOR)?shade(base,dark?0.16:-0.2):shade(base,dark?0.28:-0.3));
   // top-stitching: two rows a few millimetres either side of every seam
   const stitchRow=(x,yTop,yBot)=>{g.setLineDash([14,8]);g.strokeStyle=stitch;g.lineWidth=3;g.beginPath();g.moveTo(x,yTop);g.lineTo(x,yBot);g.stroke();};
   const seamLine=x=>{
@@ -690,6 +721,11 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     g.setLineDash([]);g.strokeStyle=groove;g.lineWidth=5;g.beginPath();g.moveTo(0,yTop);g.lineTo(CW,yTop);g.stroke();
     g.setLineDash([14,8]);g.strokeStyle=stitch;g.lineWidth=3;for(const o of[-16,16]){g.beginPath();g.moveTo(0,yTop+o);g.lineTo(CW,yTop+o);g.stroke();}
     g.setLineDash([]);
+  }else if(VISOR){ // temple seams, and a stitched, turned top edge
+    if(!HV)for(const sg of[1,-1]){const x=uX(sg*SEAM_TH[0]);g.setLineDash([]);g.strokeStyle=groove;g.lineWidth=5;g.beginPath();g.moveTo(x,0);g.lineTo(x,CH);g.stroke();
+      for(const o of[-22,22])stitchRow(x+o,CH*0.06,CH);}
+    g.setLineDash([]);g.fillStyle=shade(base,dark?0.05:-0.05);g.fillRect(0,0,CW,30);
+    g.setLineDash([14,8]);g.strokeStyle=stitch;g.lineWidth=3;g.beginPath();g.moveTo(0,48);g.lineTo(CW,48);g.stroke();g.setLineDash([]);
   }else if(CAMP){
     // a seam drawn along any path on the crown: groove plus two rows of stitching either side
     const curve=(pts,o=22)=>{
@@ -728,7 +764,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
      g.fillStyle=shade(base,-0.5);g.beginPath();g.ellipse(x,y,0.1*rx,0.1*ry,0,0,TAU);g.fill();}
   }
   // back center seam sits on both edges of the texture, from the button down to the opening
-  if(!BUCKET){
+  if(!BUCKET&&!VISOR){
   g.setLineDash([]);g.strokeStyle=groove;g.lineWidth=5;
   for(const x of[0,CW]){g.beginPath();g.moveTo(x,0);g.lineTo(x,aY(OPEN_A));g.stroke();}
   for(const x of[22,CW-22])stitchRow(x,CH*0.04,aY(OPEN_A)-14);
@@ -823,6 +859,8 @@ if(BUCKET){
   buildTapeCurve(path(th=>[th,campArch(th)],-CAMP_F,CAMP_F));
   buildTapeCurve(path(a=>[0,a],campArch(0),0.985));
   buildTapeCurve(path(a=>[Math.PI,a],OPEN_A+0.02,0.985));
+}else if(VISOR){
+  if(!HV){buildTape(SEAM_TH[0],0);buildTape(-SEAM_TH[0],0);}
 }else{
 for(const sv of[SEAM_TH[0],-SEAM_TH[0],SEAM_TH[1],-SEAM_TH[1]])buildTape(sv,0);
 buildTape(Math.PI,OPEN_A+0.02);
@@ -856,7 +894,7 @@ function paintTape(){
 const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.95,side:THREE.DoubleSide});
 (function(){
   const N=220,lim=Math.PI-OPEN_W+0.02,ys=[0.02,0.9,1.9,2.9],pos=[],idx=[];
-  const aFor=(th,y)=>{let lo=0,hi=0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
+  const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
   for(let i=0;i<=N;i++){const th=-lim+2*lim*i/N;let nx=Math.sin(th)/A,nz=Math.cos(th)/B;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
     for(const y of ys){const p=crownPoint(th,aFor(th,y)),inset=0.16+0.04*Math.sin(Math.PI*y/3);pos.push(p[0]-nx*inset,y,p[2]-nz*inset);}}
   const R=ys.length;
@@ -866,10 +904,10 @@ const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness
 })();
 
 /* ---------- brim ---------- */
-const THB=BUCKET?Math.PI:CAMP?1.15:1.1,LB=8.1,NB=BUCKET?240:110,NW=26,BT=0.12;
+const THB=BUCKET?Math.PI:VISOR?1.2:CAMP?1.15:1.1,LB=8.1,NB=BUCKET?240:110,NW=26,BT=0.12;
 // Flat pattern of the bill (what gets printed / what the template shows)
 // Outer edge is a squared-off superellipse: flat front, straight sides, ending where the brim meets the crown.
-const BRIM_RX=CAMP?8.0:SIX?7.3:FLAT?7.4:DAD?7.8:7.6,BRIM_M=CAMP?2.6:SIX?3.0:FLAT?2.8:DAD?2.6:3.0,BRIM_TIP=CAMP?16.15:SIX?15.6:FLAT?15.9:DAD?16.6:15.94;
+const BRIM_RX=HV?8.4:VISOR?8.3:CAMP?8.0:SIX?7.3:FLAT?7.4:DAD?7.8:7.6,BRIM_M=HV?2.4:VISOR?2.5:CAMP?2.6:SIX?3.0:FLAT?2.8:DAD?2.6:3.0,BRIM_TIP=HV?17.7:VISOR?17.3:CAMP?16.15:SIX?15.6:FLAT?15.9:DAD?16.6:15.94;
 const BRIM_O=(function(){const ex=A*Math.sin(THB)*0.985,ez=B*Math.cos(THB)*0.985;
   const k=Math.pow(1-Math.pow(ex/BRIM_RX,BRIM_M),1/BRIM_M),Rz=(BRIM_TIP-ez)/(1+k);
   return{Rz,zc:BRIM_TIP-Rz,psiE:Math.PI-Math.acos(Math.pow(k,BRIM_M/2))};})();
@@ -890,7 +928,7 @@ function brimPoint(th,w){
   if(L<1e-6||w<=0)return[ix,0,iz];
   const hx=(f[0]-ix)/L,hz=(f[1]-iz)/L;
   const sr=BUCKET?0:Math.sin(th)/Math.sin(THB),q=sr*sr;
-  const a0=BUCKET?0.42:CAMP?0.04+0.02*q:(SIX||FLAT)?0.07+0.12*q:DAD?0.1+0.2*q:0.2+0.38*q,a1=BUCKET?0.56:CAMP?0.05+0.03*q:(SIX||FLAT)?0.1+0.28*q:DAD?0.15+0.45*q:0.4+0.85*q,D=a1-a0,u=w;
+  const a0=BUCKET?0.42:VISOR?0.16+0.36*q:CAMP?0.04+0.02*q:(SIX||FLAT)?0.07+0.12*q:DAD?0.1+0.2*q:0.2+0.38*q,a1=BUCKET?0.56:VISOR?0.34+0.8*q:CAMP?0.05+0.03*q:(SIX||FLAT)?0.1+0.28*q:DAD?0.15+0.45*q:0.4+0.85*q,D=a1-a0,u=w;
   const h=L/D*(Math.sin(a0+D*u)-Math.sin(a0)),v=L/D*(Math.cos(a0)-Math.cos(a0+D*u));
   return[ix+hx*h,-v,iz+hz*h];
 }
@@ -927,22 +965,22 @@ function paintBrim(){
   const g=brimCanvas.getContext('2d'),W=brimCanvas.width,Hh=brimCanvas.height,base=colors.brim;
   g.fillStyle=base;g.fillRect(0,0,W,Hh);
   g.strokeStyle=eff('stitchBrim');g.lineWidth=2.4;g.setLineDash([10,6]);
-  const rows=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:SIX?[0,1,2,3,4,5,6,7,8,9].map(k=>0.08+k*0.094):FLAT?[0,1,2,3,4,5,6,7].map(k=>0.1+k*0.114):[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
+  const rows=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:SIX?[0,1,2,3,4,5,6,7,8,9].map(k=>0.08+k*0.094):FLAT?[0,1,2,3,4,5,6,7].map(k=>0.1+k*0.114):HV?[0.87]:VISOR?[0,1,2,3,4,5,6,7,8].map(k=>0.1+k*0.1):[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
   for(const w of rows){const y=(1-w)*Hh;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
   g.setLineDash([]);
   if(BUCKET){g.strokeStyle=shade(base,isDark(base)?-0.3:-0.18);g.lineWidth=3;for(const x of[W/2,1,W-1]){g.beginPath();g.moveTo(x,0);g.lineTo(x,Hh);g.stroke();}} // brim seams front and back
   brimTex.needsUpdate=true;
-  if(CAMP||SIX||FLAT||BUCKET){ // flat bills are stitched through, so the rows show underneath too
+  if(CAMP||SIX||FLAT||BUCKET||HV){ // flat bills are stitched through, so the rows show underneath too
     const u=underRowCanvas.getContext('2d'),ub=colors.under;u.fillStyle=ub;u.fillRect(0,0,W,Hh);
     u.strokeStyle=shade(ub,isDark(ub)?0.2:-0.2);u.lineWidth=2.4;u.setLineDash([10,6]);
     for(const w of rows){const y=(1-w)*Hh;u.beginPath();u.moveTo(0,y);u.lineTo(W,y);u.stroke();}u.setLineDash([]);underRowTex.needsUpdate=true;}
 }
 const underRowCanvas=document.createElement('canvas');underRowCanvas.width=2048;underRowCanvas.height=512;
 const underRowTex=new THREE.CanvasTexture(underRowCanvas);underRowTex.encoding=THREE.sRGBEncoding;underRowTex.anisotropy=maxAniso;
-if(CAMP||SIX||FLAT||BUCKET){underMat.map=underRowTex;underMat.color.set(0xffffff);underMat.needsUpdate=true;}
+if(CAMP||SIX||FLAT||BUCKET||HV){underMat.map=underRowTex;underMat.color.set(0xffffff);underMat.needsUpdate=true;}
 
 /* ---------- rope above the brim ---------- */
-let ropeOn=!CAMP&&!TRUCK&&!BUCKET&&!SIX&&!FLAT; // the dad hat in the photos has a rope, so it starts with one
+let ropeOn=!CAMP&&!TRUCK&&!BUCKET&&!SIX&&!FLAT&&!VISOR; // the dad hat in the photos has a rope, so it starts with one
 const ropeCanvas=document.createElement('canvas');ropeCanvas.width=256;ropeCanvas.height=128;
 (function(){const g=ropeCanvas.getContext('2d'),W=256,Hc=128;g.fillStyle='#ffffff';g.fillRect(0,0,W,Hc);
   // three twisted strands: diagonal bands with a shaded groove between them
@@ -966,7 +1004,7 @@ const rope=(function(){
 const apex=crownPoint(0,1);
 const buttonMat=new THREE.MeshStandardMaterial({color:lin(colors.button),roughness:0.7});
 const button=new THREE.Mesh(new THREE.SphereGeometry(0.85,28,14),buttonMat);
-button.scale.set(1,0.42,1);button.position.set(apex[0],apex[1]+0.12,apex[2]);button.castShadow=true;if(!CAMP&&!BUCKET)scene.add(button); // camp caps have no top button
+button.scale.set(1,0.42,1);button.position.set(apex[0],apex[1]+0.12,apex[2]);button.castShadow=true;if(!CAMP&&!BUCKET&&!VISOR)scene.add(button); // camp caps have no top button
 const strapMat=new THREE.MeshStandardMaterial({color:lin(colors.strap),roughness:0.45,side:THREE.DoubleSide,alphaTest:0.5});
 const pegMat=new THREE.MeshStandardMaterial({color:lin(colors.strap),roughness:0.4});
 /* Snapback closure: an outer strap with a row of holes over an inner strap whose pegs snap through.
@@ -1018,7 +1056,7 @@ function strapPiece(ph0,ph1,r,opt){
 const HOLE_D=[0,1,2,3,4,5,6].map(k=>-0.44+k*SNAP.pitch);
 const PEG_D=[2,3,4,5,6,7,8].map(k=>-0.44+k*SNAP.pitch);
 const R_OUT=0.945,R_IN=0.923;
-if(!CAMP&&!BUCKET){
+if(!CAMP&&!BUCKET&&!VISOR){
 strapPiece(Math.PI-0.84,Math.PI+0.385,R_OUT,{holes:HOLE_D.map(d=>Math.PI+d),roundEnd:1});
 strapPiece(Math.PI-0.27,Math.PI+0.84,R_IN,{roundEnd:-1});
 }
@@ -1046,7 +1084,7 @@ if(CAMP)(function(){ // camp closure: nylon webbing strap through a plastic ladd
   const tail=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.85),mat);const tp=Math.PI-0.39,tn=snapNormal(tp);
   tail.position.copy(snapPt(tp,(y0+y1)/2,r).addScaledVector(tn,0.12));tail.lookAt(tail.position.clone().add(tn));scene.add(tail);
 })();
-if(!CAMP&&!BUCKET)(function(){
+if(!CAMP&&!BUCKET&&!VISOR)(function(){
   const up=new THREE.Vector3(0,1,0),yMid=(SNAP.y0+SNAP.y1)/2;
   const stem=new THREE.CylinderGeometry(0.17,0.17,1,18);
   const dome=new THREE.SphereGeometry(1,28,14,0,TAU,0,Math.PI/2);
@@ -1057,6 +1095,45 @@ if(!CAMP&&!BUCKET)(function(){
     if(snapped){ add(stem,ph,baseR,0.09,1,0.2); add(dome,ph,R_OUT,0.0,0.235,0.11); }
     else{ add(stem,ph,baseR,0.07,0.9,0.16); add(dome,ph,baseR,0.14,0.2,0.1); }
   });
+})();
+
+if(VISOR)(function(){ // hook-and-loop closure: a fabric strap behind the band's ends, with a loop tab laid over it
+  const fab=(ph0,ph1,r,y0,y1,round,border)=>{
+    const N=90,arc=(ph1-ph0)*A*r,PX=90,cw=Math.round(arc*PX),chh=Math.round((y1-y0)*PX),rr=chh/2;
+    const c=newCanvasSimple(cw,chh),g=c.getContext('2d');g.fillStyle='#ffffff';g.beginPath();
+    if(round){g.moveTo(0,0);g.lineTo(cw-rr,0);g.arc(cw-rr,rr,rr,-Math.PI/2,Math.PI/2);g.lineTo(0,chh);}else g.rect(0,0,cw,chh);
+    g.closePath();g.fill();
+    g.globalCompositeOperation='source-atop';
+    g.strokeStyle='rgba(0,0,0,0.07)';g.lineWidth=1;for(let y=2;y<chh;y+=4){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();} // twill
+    if(border){g.strokeStyle='rgba(0,0,0,0.32)';g.lineWidth=3;g.setLineDash([12,7]);const m=12;g.beginPath();
+      if(round){g.moveTo(0,m);g.lineTo(cw-rr,m);g.arc(cw-rr,rr,rr-m,-Math.PI/2,Math.PI/2);g.lineTo(0,chh-m);}else g.rect(m,m,cw-2*m,chh-2*m);g.stroke();g.setLineDash([]);}
+    const gr=g.createLinearGradient(0,0,0,chh);gr.addColorStop(0,'rgba(0,0,0,0.14)');gr.addColorStop(0.1,'rgba(0,0,0,0)');gr.addColorStop(0.9,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,0.16)');
+    g.fillStyle=gr;g.fillRect(0,0,cw,chh);g.globalCompositeOperation='source-over';
+    const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
+    const pos=[],uv=[],idx=[],rIn=r-0.12/A;
+    const band=(rad,flip)=>{const base=pos.length/3;
+      for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const y of[y0,y1]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,(y-y0)/(y1-y0));}}
+      for(let k=0;k<N;k++){const a=base+2*k;if(!flip)idx.push(a,a+2,a+1,a+1,a+2,a+3);else idx.push(a,a+1,a+2,a+1,a+3,a+2);}};
+    band(r,false);band(rIn,true);
+    for(const [y,v] of[[y0,0.004],[y1,0.996]]){const base=pos.length/3;
+      for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const rad of[r,rIn]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,v);}}
+      for(let k=0;k<N;k++){const a=base+2*k;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
+    const mat=strapMat.clone();mat.map=tex;mat.color=strapMat.color;mat.roughness=0.9;
+    const m=new THREE.Mesh(geo,mat);m.castShadow=true;scene.add(m);return m;};
+  if(HV){ // high visor: a fabric strap doubled back through two metal slides
+    fab(Math.PI-0.84,Math.PI+0.84,0.95,0.45,2.65,false,false);
+    fab(Math.PI-0.48,Math.PI+0.12,0.975,0.45,2.65,false,true);
+    const metal=new THREE.MeshStandardMaterial({color:0xc9ccd0,metalness:0.85,roughness:0.32});
+    for(const ph of[Math.PI-0.5,Math.PI+0.3]){const n=snapNormal(ph),c=snapPt(ph,1.55,1.0),grp=new THREE.Group();
+      for(const [w,h,x,y] of[[0.12,2.6,-0.2,0],[0.12,2.6,0.2,0],[0.52,0.12,0,1.24],[0.52,0.12,0,-1.24],[0.1,2.4,0,0]])
+        {const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.09),metal);m.position.set(x,y,0);grp.add(m);}
+      grp.position.copy(c);grp.lookAt(c.clone().add(n));scene.add(grp);}
+  }else{
+  fab(Math.PI-0.84,Math.PI+0.84,0.95,0.35,2.75,false,false);   // strap running behind both ends of the band
+  fab(Math.PI-0.5,Math.PI+0.36,0.985,0.3,2.8,true,true);        // loop tab pressed over it, stitched all round
+  }
 })();
 
 /* ---------- ground shadow ---------- */
@@ -1106,7 +1183,7 @@ SKIP_GROOVE=false;
 const BAND={N:300,rows:10,y0:0.08,y1:2.82};
 const inTagGeo=(function(){
   const lim=Math.PI-OPEN_W+0.02,pos=[],idx=[],flat=[],{N,rows,y0,y1}=BAND;
-  const aFor=(th,y)=>{let lo=0,hi=0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
+  const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
   const ths=[];for(let i=0;i<=N;i++)ths.push(-lim+2*lim*i/N);
   // arc length around the band at mid height, measured from the front center
   const mid=ths.map(th=>{const p=crownPoint(th,aFor(th,1.45));return[p[0],p[2]];});
@@ -1515,7 +1592,10 @@ const VIEWS={
   insideFront:{yaw:Math.PI,pitch:-1.2,dist:32,target:[0,4.5,3]},
   tagView:{yaw:Math.PI/2,pitch:-0.42,dist:30,target:[-3,1.6,-1.5]}
 };
-const cam={yaw:0.78,pitch:0.2,dist:42,target:new THREE.Vector3(0,3.6,3.5)};
+if(VISOR){ // a low, open band: frame it lower, and look into it from above for the inside views
+  for(const k of['front','quarter','left','right','back'])VIEWS[k].target[1]-=HV?0.5:1.1;
+  Object.assign(VIEWS,{inside:{yaw:0,pitch:0.95,dist:34,target:[0,1.2,-1.5]},insideFront:{yaw:Math.PI,pitch:0.95,dist:34,target:[0,1.2,1.5]}});}
+const cam={yaw:0.78,pitch:0.2,dist:42,target:new THREE.Vector3(0,VISOR?2.5:3.6,3.5)};
 let tween=null,spinning=false,dirty=true;
 const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function goView(name){
@@ -1604,7 +1684,7 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
     <div class="actions"><button class="btn quiet" data-act="template" id="templateBtn">Download brim template</button></div></div>`:''}
   ${key==='front'?`<div class="group"><span class="label">Brim</span><label class="check" style="margin-top:0"><input type="checkbox" id="front-onbrim"> Let the art run down onto the brim</label><p class="fitnote">Move the art down with the Up and down slider, or make it larger, and it continues from the front panel onto the top of the bill.</p></div>`:''}
   ${key==='back'?`<div class="group"><span class="label">Closure colors</span><div class="colorgrid">
-      <label><input type="color" data-color="strap"> Snap strap</label><label><input type="color" data-color="binding"> Binding tape</label></div></div>`:''}
+      <label><input type="color" data-color="strap"> ${VISOR?'Strap':'Snap strap'}</label><label><input type="color" data-color="binding"> Binding tape</label></div></div>`:''}
   ${key==='inside'?`<div class="group"><span class="label">Inside colors</span><div class="colorgrid">
       <label><input type="color" data-color="lining"> Lining</label><label><input type="color" data-color="tape"> Seam tape</label>
       <label><input type="color" data-color="sweat"> Sweatband</label></div>
@@ -1877,7 +1957,7 @@ function applyColors(){
   paintCrown();paintBrim();
   tapeMat.color.copy(lin(eff('tape')));paintTape();sweatMat.color.copy(lin(eff('sweat')));
   ropeMat.color.copy(lin(colors.rope));
-  if(!CAMP&&!SIX&&!FLAT&&!BUCKET)underMat.color.copy(lin(colors.under));edgeMat.color.copy(lin(colors.brim));buttonMat.color.copy(lin(colors.button));strapMat.color.copy(lin(colors.strap));pegMat.color.copy(lin(shade(colors.strap,isDark(colors.strap)?0.06:-0.06)));
+  if(!CAMP&&!SIX&&!FLAT&&!BUCKET&&!HV)underMat.color.copy(lin(colors.under));edgeMat.color.copy(lin(colors.brim));buttonMat.color.copy(lin(colors.button));strapMat.color.copy(lin(colors.strap));visorEdgeMat.color.copy(lin(shade(colors.crown,isDark(colors.crown)?0.05:-0.05)));pegMat.color.copy(lin(shade(colors.strap,isDark(colors.strap)?0.06:-0.06)));
   dirty=true;
 }
 
@@ -1944,10 +2024,10 @@ function colorSpecRows(){
   else add('Crown','Crown',colors.crown);
   if(TRUCK&&!recolored)add('Crown','Mesh',eff('mesh'));
   add('Crown','Crown stitching',eff('stitchCrown'));
-  if(!CAMP&&!BUCKET)add('Crown','Top button',colors.button);
+  if(!CAMP&&!BUCKET&&!VISOR)add('Crown','Top button',colors.button);
   add('Brim','Brim top',colors.brim);add('Brim','Underbrim',colors.under);add('Brim','Brim stitching',eff('stitchBrim'));
   if(ropeOn)add('Brim','Rope',colors.rope);
-  if(!BUCKET){add('Closure',CAMP?'Webbing strap and buckle':'Snap strap',colors.strap);add('Closure','Binding tape',eff('binding'));}
+  if(!BUCKET){add('Closure',CAMP?'Webbing strap and buckle':VISOR?(HV?'Adjustable strap':'Hook-and-loop strap'):'Snap strap',colors.strap);add('Closure','Binding tape',eff('binding'));}
   add('Inside','Lining',eff('lining'));add('Inside','Seam tape',eff('tape'));add('Inside','Sweatband',eff('sweat'));
   if((tapeText.text||'').trim())add('Inside','Tape text',tapeText.color);
   for(const k of ZONE_KEYS){const z=ZONES[k];if(!z.tex)continue;const where=z.title||k;
@@ -1958,7 +2038,7 @@ function colorSpecRows(){
   return rows.map(([sec,part,hex])=>{const p=nearestPantone(hex);return{sec,part,hex,pms:p.name,pmsHex:p.hex.toUpperCase(),d:p.d};});
 }
 function colorSpecFiles(){
-  const rows=colorSpecRows(),styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat'}[STYLE]||'5-panel';
+  const rows=colorSpecRows(),styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat',visor:'Low crown visor',hvisor:'High crown visor'}[STYLE]||'5-panel';
   const name=($('#designName')&&$('#designName').value.trim())||'Untitled design';
   const q=d=>d<2?'very close':d<5?'close':d<10?'approximate':'loose';
   const w=[22,40];let txt=`CAP STUDIO COLOR SPEC\nDesign: ${name}\nStyle: ${styleName}\nCreated: ${new Date().toLocaleString()}\n\n`;
@@ -2097,7 +2177,7 @@ function calloutItems(){
   else add('Crown',[colors.crown],onCrown(-0.25,0.42),OUT);
   if(TRUCK&&!recolored)add('Mesh',[eff('mesh')],onCrown(-(S0+S1)/2,0.4),OUT);
   add('Crown stitching',[eff('stitchCrown')],BUCKET?onCrown(0,0.3):CAMP?onCrown(CAMP_F,0.2):onCrown(S0,0.3),OUT);
-  if(!CAMP&&!BUCKET)add('Top button',[colors.button],{p:V(apex[0],apex[1]+0.32,apex[2]),n:V(0,1,0.2).normalize()},OUT);
+  if(!CAMP&&!BUCKET&&!VISOR)add('Top button',[colors.button],{p:V(apex[0],apex[1]+0.32,apex[2]),n:V(0,1,0.2).normalize()},OUT);
   // brim
   const bt=(th,w)=>({p:V(...brimSurf(th,w,BT+0.04)),n:V(0,1,0)});
   add('Brim top',[colors.brim],bt(BUCKET?0.6:0.45,0.72),OUT);
@@ -2106,7 +2186,7 @@ function calloutItems(){
   add('Underbrim',[colors.under],{p:V(...brimSurf(BUCKET?0.5:0.35,0.6,-BT-0.05)),n:V(0,-1,0)},UNDER);
   // closure
   if(!BUCKET){
-    add(CAMP?'Webbing strap':'Snap strap',[colors.strap],{p:snapPt(Math.PI+0.15,1.1,CAMP?0.95:R_OUT+0.01),n:V(0,0,-1)},['back']);
+    add(CAMP?'Webbing strap':VISOR?(HV?'Adjustable strap':'Hook-and-loop strap'):'Snap strap',[colors.strap],{p:snapPt(Math.PI+0.15,1.1,CAMP?0.95:VISOR?1.0:R_OUT+0.01),n:V(0,0,-1)},['back']);
     add('Binding tape',[eff('binding')],onCrown(Math.PI-OPEN_W*0.55,openA(OPEN_W*0.55)+0.012,0.05),['back']);
   }
   // inside
@@ -2130,7 +2210,7 @@ function calloutItems(){
 }
 const CALLOUT_VIEWS=[['quarter','Front three-quarter','09-colors-front'],['back','Back','10-colors-back'],['under','Underside and inside','11-colors-underside']];
 function renderCalloutSheets(S){
-  const items=calloutItems(),out=[],styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat'}[STYLE]||'5-panel';
+  const items=calloutItems(),out=[],styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat',visor:'Low crown visor',hvisor:'High crown visor'}[STYLE]||'5-panel';
   const camPos=new THREE.Vector3();
   // give each part to the view where it faces the camera best
   const scoreIn=(it,view)=>{const v=VIEWS[view];const cp=Math.cos(v.pitch);
@@ -2359,21 +2439,23 @@ async function switchStyle(next,design){
   if(next===STYLE)return;
   const d=design?JSON.parse(JSON.stringify(design)):serializeDesign();
   d.style=next;
-  if(next==='trucker'||next==='flat'){d.perforated=false;}
+  if(next==='trucker'||next==='flat'||next==='visor'||next==='hvisor'){d.perforated=false;d.ropeOn=false;}
   if(next==='camp'||next==='dad'){d.perforated=false;d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#1F2225'});}
+  else if(next==='hvisor'){d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#1F2225'});}
+  else if(next==='visor'){d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#8E9399'});}
   else if(next==='bucket'||next==='flat'){d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#1F2225'});}
   else if(d.colors&&d.colors.tape==='#1F2225'&&d.colors.sweat==='#1F2225'){d.colors.tape=null;d.colors.sweat=null;}
   try{sessionStorage.setItem('capStyle',next);sessionStorage.setItem('capResume','1');}catch(e){toast('Switching cap styles isn’t available in this view.');return;}
   try{await IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d});}catch(e){}
-  toast('Switching to '+({camp:'camp cap',trucker:'trucker',sixpanel:'6-panel',flat:'flat brim snapback',dad:'dad hat',bucket:'bucket hat'}[next]||'5-panel')+'…');
+  toast('Switching to '+({camp:'camp cap',trucker:'trucker',sixpanel:'6-panel',flat:'flat brim snapback',dad:'dad hat',bucket:'bucket hat',visor:'low crown visor',hvisor:'high crown visor'}[next]||'5-panel')+'…');
   setTimeout(()=>location.reload(),60);
 }
-if(CAMP||BUCKET){const bl=$('[data-color="button"]');if(bl&&bl.closest('label'))bl.closest('label').hidden=true;}
+if(CAMP||BUCKET||VISOR){const bl=$('[data-color="button"]');if(bl&&bl.closest('label'))bl.closest('label').hidden=true;}
 if(BUCKET){for(const k of['strap','binding']){const el=$(`[data-color="${k}"]`);if(el&&el.closest('.group'))el.closest('.group').hidden=true;}} // no top button on a camp cap
 $$('#styleSeg button').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.style===STYLE));b.addEventListener('click',()=>switchStyle(b.dataset.style));});
 if(!TRUCK)$('#meshColorLabel').hidden=true;
-if(TRUCK){const pl=$('#perfToggle');if(pl&&pl.closest('label'))pl.closest('label').hidden=true;}
-$('#styleNote').textContent=FLAT?'Flat brim snapback: a high, structured six-panel crown with a center front seam, an eyelet on every panel, a flat stitched bill and a snap closure.':BUCKET?'Bucket hat: a tapered crown with a flat top panel, a laser-perforated band, and a brim that slopes down all the way around. No closure or top button.':DAD?'Unstructured dad hat: six soft panels with no buckram, so the crown relaxes and sits low, with an eyelet on each panel, a gently curved bill and a snap closure.':SIX?'High-profile 6-panel: a tall, upright front panel under an arched seam, a top panel, teardrop laser-perforated sides and back, a flat bill and a snap closure.':TRUCK?'Classic six-panel trucker: structured front panels split by a center seam, breathable mesh sides and back, a curved bill and a snap closure.':CAMP?'Soft, low camp cap: one front panel under an arched seam, side panels with eyelets, a flat bill and a webbing strap with a buckle.'
+if(TRUCK||VISOR){const pl=$('#perfToggle');if(pl&&pl.closest('label'))pl.closest('label').hidden=true;}
+$('#styleNote').textContent=HV?'High crown visor: a tall, seamless band that leans back over the forehead and tapers toward the back, a bound top edge, a curved bill with a contrast underside, and an adjustable strap with metal slides.':VISOR?'Low crown visor: an open-top band, tallest over the forehead and tapering toward the back, with temple seams, a pre-curved stitched bill, a mesh sweatband and a hook-and-loop strap.':FLAT?'Flat brim snapback: a high, structured six-panel crown with a center front seam, an eyelet on every panel, a flat stitched bill and a snap closure.':BUCKET?'Bucket hat: a tapered crown with a flat top panel, a laser-perforated band, and a brim that slopes down all the way around. No closure or top button.':DAD?'Unstructured dad hat: six soft panels with no buckram, so the crown relaxes and sits low, with an eyelet on each panel, a gently curved bill and a snap closure.':SIX?'High-profile 6-panel: a tall, upright front panel under an arched seam, a top panel, teardrop laser-perforated sides and back, a flat bill and a snap closure.':TRUCK?'Classic six-panel trucker: structured front panels split by a center seam, breathable mesh sides and back, a curved bill and a snap closure.':CAMP?'Soft, low camp cap: one front panel under an arched seam, side panels with eyelets, a flat bill and a webbing strap with a buckle.'
   :'Structured A-frame 5-panel with a curved bill and a snap closure. Switching keeps your artwork, colors and settings.';
 async function resumeSession(){ // after a style switch, bring the design back
   try{const items=await IDB.all();const ses=items.find(i=>i.id==='__session__');if(!ses)return;
@@ -2412,7 +2494,7 @@ async function renderWelcome(){
     const li=document.createElement('li');li.className='design-item';
     const img=document.createElement('img');img.alt='';img.src=it.thumb||'';
     const meta=document.createElement('div');meta.className='meta';const nm=document.createElement('strong');nm.textContent=it.name;
-    const dt=document.createElement('span');const st={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat'}[it.design&&it.design.style]||'5-panel';
+    const dt=document.createElement('span');const st={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat',visor:'Low crown visor',hvisor:'High crown visor'}[it.design&&it.design.style]||'5-panel';
     dt.textContent=st+', saved '+new Date(it.updated).toLocaleDateString([], {month:'short',day:'numeric'});meta.append(nm,dt);
     const acts=document.createElement('div');acts.className='acts';const open=document.createElement('button');open.className='btn primary';open.textContent='Open';
     open.addEventListener('click',async()=>{try{await restoreDesign(it.design);$('#designName').value=it.name;closeWelcome();toast('Opened '+it.name);}catch(e){toast('That design couldn’t be opened.');}});

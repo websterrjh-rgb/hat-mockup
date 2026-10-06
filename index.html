@@ -4,15 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cap studio: 3D hat mockups</title>
-<meta name="theme-color" content="#1E6B4A">
-<meta name="description" content="Design custom hats in 3D and export images and 360° video.">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Cap studio">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Playfair+Display:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
@@ -921,7 +912,7 @@ function paintBrim(){
   const g=brimCanvas.getContext('2d'),W=brimCanvas.width,Hh=brimCanvas.height,base=colors.brim;
   g.fillStyle=base;g.fillRect(0,0,W,Hh);
   g.strokeStyle=eff('stitchBrim');g.lineWidth=2.4;g.setLineDash([10,6]);
-  const rows=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
+  const rows=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:SIX?[0,1,2,3,4,5,6,7].map(k=>0.32+k*0.087):[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
   for(const w of rows){const y=(1-w)*Hh;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
   g.setLineDash([]);
   if(BUCKET){g.strokeStyle=shade(base,isDark(base)?-0.3:-0.18);g.lineWidth=3;for(const x of[W/2,1,W-1]){g.beginPath();g.moveTo(x,0);g.lineTo(x,Hh);g.stroke();}} // brim seams front and back
@@ -2433,12 +2424,6 @@ Promise.race([Promise.all(['sans','script','serif'].map(loadFont)),new Promise(r
     document.title=(SHARED.name||'Cap design')+' (3D cap preview)';}
 });
 })();
-</script>
-<script>
-/* Register the service worker so Cap studio can be installed and opened offline (needs https or localhost). */
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
-}
 </script>
 </body>
 </html>

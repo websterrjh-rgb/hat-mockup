@@ -378,6 +378,11 @@ body.viewer #stitchBtn{display:none}
           <div class="seg" id="styleSeg"><button data-style="5panel">5-panel</button><button data-style="camp">Camp cap</button><button data-style="trucker">Trucker</button><button data-style="sixpanel">6-panel</button><button data-style="flat">Flat brim</button><button data-style="dad">Dad hat</button><button data-style="bucket">Bucket hat</button><button data-style="visor">Low visor</button><button data-style="hvisor">High visor</button></div>
           <p class="fitnote" id="styleNote"></p>
         </div>
+        <div class="group" id="closureGroup">
+          <span class="label">Closure</span>
+          <div class="seg wrap" id="closureSeg"></div>
+          <p class="fitnote" id="closureNote"></p>
+        </div>
         <div class="group" id="dimGroup">
           <span class="label">Dimensions</span>
           <div class="dimrows" id="dimRows"></div>
@@ -643,7 +648,7 @@ const isDark=h=>lum(h)<0.42;
 function lin(hex){return new THREE.Color(hex).convertSRGBToLinear();}
 
 /* ---------- state ---------- */
-const colors={crown:'#F3F3F1',brim:'#1F2225',under:'#1F2225',button:'#1F2225',strap:'#1F2225',rope:'#F4F4F2',
+const colors={crown:'#F3F3F1',brim:'#1F2225',under:'#1F2225',button:'#1F2225',strap:'#1F2225',rope:'#F4F4F2',hardware:'#C9CCD0',
   binding:null,lining:null,tape:null,sweat:null,stitchCrown:null,stitchBrim:null,mesh:'#EEEAE0'}; // null = follows the fabric color
 function eff(k){if(colors[k])return colors[k];const c=colors.crown,d=isDark(c);
   if(k.startsWith('p_'))return(TRUCK&&MESH_PANELS.includes(k))?colors.mesh:c;
@@ -665,6 +670,12 @@ let RESUMING=false;try{RESUMING=sessionStorage.getItem('capResume')==='1';sessio
 if(RESUMING)document.getElementById('welcome').hidden=true;
 if(!['camp','trucker','sixpanel','flat','dad','bucket','visor','hvisor'].includes(STYLE))STYLE='5panel';
 const CAMP=STYLE==='camp',TRUCK=STYLE==='trucker',SIX=STYLE==='sixpanel',FLAT=STYLE==='flat',DAD=STYLE==='dad',BUCKET=STYLE==='bucket',HV=STYLE==='hvisor',VISOR=STYLE==='visor'||HV; // HV: high crown visor (shares the visor build)
+// Closure at the back. Each style starts with its usual closure; the choice is kept per style and the hat is rebuilt with it.
+const CLOSURES={snap:'Snapback',velcro:'Hook-and-loop',buckle:'Strap and buckle',leather:'Leather strap',slides:'Strap with slides',webbing:'Webbing and clip',bungee:'Bungee cord',fitted:'Fitted (closed back)'};
+const CLOSURE_OPTS=BUCKET?[]:VISOR?['velcro','slides','snap','buckle','leather','bungee']:['snap','velcro','buckle','leather','slides','webbing','bungee','fitted'];
+const CLOSURE_DEF=BUCKET?'none':CAMP?'webbing':HV?'slides':VISOR?'velcro':'snap';
+let CLOSURE=CLOSURE_DEF;try{const c=JSON.parse(sessionStorage.getItem('capClosure')||'null');if(c&&c.style===STYLE&&CLOSURE_OPTS.includes(c.closure))CLOSURE=c.closure;}catch(e){}
+const FITTED=CLOSURE==='fitted',HAS_HW=['buckle','leather','slides','bungee'].includes(CLOSURE);
 let perforated=!CAMP&&!TRUCK&&!DAD&&!FLAT&&!VISOR;
 // Crown panels for each style: [color key, label, region]. "Left" and "right" are the wearer's.
 const PANELS=HV?[['p_lside','Left half'],['p_rside','Right half']]
@@ -958,7 +969,7 @@ if(VISOR){const lim=Math.PI-0.62-0.02,pts=[];for(let k=0;k<=160;k++){const th=-l
   const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),320,HV?0.13:0.085,10,false),visorEdgeMat);m.castShadow=true;scene.add(m);}
 
 const SEAMS=[SEAM_TH[0],-SEAM_TH[0],SEAM_TH[1],-SEAM_TH[1]];
-const OPEN_W=BUCKET?0:VISOR?0.62:CAMP?0.42:FLAT?0.53:0.48,OPEN_P=VISOR?3.6:2.8,OPEN_A=VISOR?1.02:aAtHeight(Math.PI,CAMP?4.0:FLAT?4.8:4.2);
+const OPEN_W=(BUCKET||FITTED)?0:VISOR?0.62:CAMP?0.42:FLAT?0.53:0.48,OPEN_P=VISOR?3.6:2.8,OPEN_A=VISOR?1.02:aAtHeight(Math.PI,CAMP?4.0:FLAT?4.8:4.2);
 function archA(d,W,A0){return d>=W?0:A0*Math.pow(1-Math.pow(d/W,OPEN_P),1/OPEN_P);}
 function openA(d){return archA(d,OPEN_W,OPEN_A);}
 const uX=th=>(th+Math.PI)/TAU*CW, aY=a=>(1-a)*CH;
@@ -1113,8 +1124,9 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
   // back center seam sits on both edges of the texture, from the button down to the opening
   if(!BUCKET&&!VISOR){
   g.setLineDash([]);g.strokeStyle=groove;g.lineWidth=5;
-  for(const x of[0,CW]){g.beginPath();g.moveTo(x,0);g.lineTo(x,aY(OPEN_A));g.stroke();}
-  for(const x of[22,CW-22])stitchRow(x,CH*0.04,aY(OPEN_A)-14);
+  const yBack=FITTED?CH:aY(OPEN_A);
+  for(const x of[0,CW]){g.beginPath();g.moveTo(x,0);g.lineTo(x,yBack);g.stroke();}
+  for(const x of[22,CW-22])stitchRow(x,CH*0.04,yBack-14);
   }
   g.setLineDash([14,8]);g.strokeStyle=stitch;g.lineWidth=3;
   // base stitch
@@ -1123,13 +1135,13 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
   // back opening: binding tape with a stitch line, then the cut-out
   const arch=(side,W,A0)=>{const pts=[];for(let k=0;k<=60;k++){const d=W*(1-k/60);const th=side>0?Math.PI-d:-Math.PI+d;pts.push([uX(th),aY(archA(d,W,A0))]);}return pts;};
   const strokeArch=(side,W,A0)=>{const pts=arch(side,W,A0);g.beginPath();g.moveTo(pts[0][0],CH+4);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(side>0?CW+4:-4,pts[pts.length-1][1]);g.stroke();};
-  if(!BUCKET)for(const side of[1,-1]){
+  if(!BUCKET&&!FITTED)for(const side of[1,-1]){
     g.setLineDash([]);g.strokeStyle=binding;g.lineWidth=120;strokeArch(side,OPEN_W,OPEN_A);
     g.strokeStyle=shade(base,dark?-0.2:-0.16);g.lineWidth=3;strokeArch(side,OPEN_W+0.075,OPEN_A+0.031);
     g.setLineDash([14,8]);g.strokeStyle=stitch;g.lineWidth=3;strokeArch(side,OPEN_W+0.05,OPEN_A+0.021);
     g.setLineDash([]);
   }
-  if(!BUCKET)for(const side of[1,-1]){
+  if(!BUCKET&&!FITTED)for(const side of[1,-1]){
     const pts=arch(side,OPEN_W,OPEN_A);
     g.globalCompositeOperation='destination-out';g.fillStyle='#000';g.beginPath(); // fully opaque fill = fully removed
     g.moveTo(pts[0][0],CH+2);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(side>0?CW+2:-2,pts[pts.length-1][1]);g.lineTo(side>0?CW+2:-2,CH+2);g.closePath();g.fill();
@@ -1206,12 +1218,12 @@ if(BUCKET){
   }
   buildTapeCurve(path(th=>[th,campArch(th)],-CAMP_F,CAMP_F));
   buildTapeCurve(path(a=>[0,a],campArch(0),0.985));
-  buildTapeCurve(path(a=>[Math.PI,a],OPEN_A+0.02,0.985));
+  buildTapeCurve(path(a=>[Math.PI,a],FITTED?0.01:OPEN_A+0.02,0.985));
 }else if(VISOR){
   if(!HV){buildTape(SEAM_TH[0],0);buildTape(-SEAM_TH[0],0);}
 }else{
 for(const sv of[SEAM_TH[0],-SEAM_TH[0],SEAM_TH[1],-SEAM_TH[1]])buildTape(sv,0);
-buildTape(Math.PI,OPEN_A+0.02);
+buildTape(Math.PI,FITTED?0.01:OPEN_A+0.02);
 if(SIX){const pts=[];for(let i=0;i<=60;i++){const th=-SEAM_TH[0]+2*SEAM_TH[0]*i/60;pts.push([th,sixArch(th)]);}buildTapeCurve(pts);}
 else buildTape(0,(TRUCK||DAD||FLAT)?0:CENTER_A-0.01);
 }
@@ -1239,12 +1251,13 @@ function paintTape(){
 }
 
 /* sweatband: a band just inside the crown base, running from one side of the snap opening to the other */
+const STRAP_R0=VISOR?0.95:0.935,STRAP_R1=VISOR?(HV?0.975:0.985):0.955,STRAP_Y=VISOR?(HV?[0.45,2.65]:[0.3,2.3]):[0.15,2.05]; // closure strap: inner layer, outer layer, height
 const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.95,side:THREE.DoubleSide,envMapIntensity:0.6});
 (function(){
-  const N=360,lim=Math.PI-OPEN_W+0.02,ys=(VISOR&&!HV)?[0.02,0.1,0.75,1.5,2.4]:[0.02,0.1,0.9,1.9,2.9],pos=[],idx=[];
+  const N=360,lim=Math.min(Math.PI,Math.PI-OPEN_W+0.02),ys=(VISOR&&!HV)?[0.02,0.1,0.75,1.5,2.4]:[0.02,0.1,0.9,1.9,2.9],pos=[],idx=[];
   // Inside the back, the closure strap's ends are sewn between the crown and the sweatband, so the band steps in
   // just past the strap and covers its ends. From inside you see clean sweatband right up to the opening.
-  const SB=BUCKET?null:CAMP?{r:0.94-0.012,ext:0.8}:VISOR?{r:0.95-0.12/A-0.008,ext:0.84}:{r:0.923-0.14/A-0.008,ext:0.84};
+  const SB=(BUCKET||FITTED||CLOSURE==='bungee')?null:CLOSURE==='webbing'?{r:STRAP_R0-0.012,ext:0.8}:CLOSURE==='snap'?{r:0.923-0.14/A-0.008,ext:0.84}:{r:STRAP_R0-0.12/A-0.008,ext:0.84};
   const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
   for(let i=0;i<=N;i++){const th=-lim+2*lim*i/N;let nx=Math.sin(th)/A,nz=Math.cos(th)/B;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
     const d=Math.PI-Math.abs(Math.atan2(Math.sin(th),Math.cos(th))); // angle from the back center
@@ -1407,9 +1420,12 @@ const button=new THREE.Mesh(new THREE.SphereGeometry(0.85,28,14),buttonMat);
 button.scale.set(1,0.42,1);button.position.set(apex[0],apex[1]+0.12,apex[2]);button.castShadow=true;if(!CAMP&&!BUCKET&&!VISOR)scene.add(button); // camp caps have no top button
 const strapMat=new THREE.MeshStandardMaterial({color:lin(colors.strap),roughness:0.45,side:THREE.DoubleSide,alphaTest:0.5});
 const pegMat=new THREE.MeshStandardMaterial({color:lin(colors.strap),roughness:0.4});
-/* Snapback closure: an outer strap with a row of holes over an inner strap whose pegs snap through.
-   Both sit just inside the crown so their ends tuck behind the back panels. */
+/* ---------- closures ----------
+   Every closure sits just inside the crown so its ends tuck behind the back panels (and, inside, under the sweatband). */
+const hwMat=new THREE.MeshStandardMaterial({color:lin(colors.hardware),metalness:0.85,roughness:0.3});
+let HW_PT=null; // where the hardware is, for the color callouts
 const SNAP={y0:0.12,y1:1.9,hole:0.25,pitch:0.122};
+function CLOSURE_PART(){return{snap:'Snap strap',velcro:'Hook-and-loop strap',buckle:'Strap',leather:'Leather strap',slides:'Strap',webbing:'Webbing and clip',bungee:'Cord and cord lock'}[CLOSURE]||'Strap';}
 function newCanvasSimple(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
 const snapNormal=ph=>new THREE.Vector3(Math.sin(ph)/A,0,Math.cos(ph)/B).normalize();
 const snapPt=(ph,y,r)=>new THREE.Vector3(A*Math.sin(ph)*r,y,B*Math.cos(ph)*r);
@@ -1456,35 +1472,9 @@ function strapPiece(ph0,ph1,r,opt){
 const HOLE_D=[0,1,2,3,4,5,6].map(k=>-0.44+k*SNAP.pitch);
 const PEG_D=[2,3,4,5,6,7,8].map(k=>-0.44+k*SNAP.pitch);
 const R_OUT=0.945,R_IN=0.923;
-if(!CAMP&&!BUCKET&&!VISOR){
+function buildSnap(){
 strapPiece(Math.PI-0.84,Math.PI+0.385,R_OUT,{holes:HOLE_D.map(d=>Math.PI+d),roundEnd:1});
 strapPiece(Math.PI-0.27,Math.PI+0.84,R_IN,{roundEnd:-1});
-}
-if(CAMP)(function(){ // camp closure: nylon webbing strap through a plastic ladder-lock buckle
-  const y0=0.25,y1=2.15,N=70,r=0.94,ph0=Math.PI-0.8,ph1=Math.PI+0.8,pos=[],uv=[],idx=[];
-  for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const y of[y0,y1]){const p=snapPt(ph,y,r);pos.push(p.x,p.y,p.z);uv.push(k/N,(y-y0)/(y1-y0));}}
-  for(let k=0;k<N;k++){const a=2*k;idx.push(a,a+2,a+1,a+1,a+2,a+3);}
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
-  const cv=newCanvasSimple(1600,180),g=cv.getContext('2d');g.fillStyle='#ffffff';g.fillRect(0,0,1600,180);
-  g.strokeStyle='rgba(0,0,0,0.22)';g.lineWidth=2;for(let x=0;x<1600;x+=6){g.beginPath();g.moveTo(x,0);g.lineTo(x,180);g.stroke();}
-  g.fillStyle='rgba(0,0,0,0.25)';g.fillRect(0,0,1600,10);g.fillRect(0,170,1600,10);
-  const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
-  const mat=new THREE.MeshStandardMaterial({map:tex,color:strapMat.color,roughness:0.85,side:THREE.DoubleSide});
-  scene.add(new THREE.Mesh(geo,mat));
-  // buckle
-  const bc=newCanvasSimple(256,320),bg=bc.getContext('2d');bg.fillStyle='#ffffff';bg.fillRect(0,0,256,320);
-  bg.fillStyle='#8a8a8a';for(const x of[40,150])bg.fillRect(x,40,66,240);bg.strokeStyle='#666';bg.lineWidth=8;bg.strokeRect(8,8,240,304);
-  const btex=new THREE.CanvasTexture(bc);btex.encoding=THREE.sRGBEncoding;
-  const bmat=new THREE.MeshStandardMaterial({color:pegMat.color,roughness:0.4});
-  const fmat=new THREE.MeshStandardMaterial({map:btex,color:pegMat.color,roughness:0.4});
-  const box=new THREE.Mesh(new THREE.BoxGeometry(2.0,2.5,0.32),[bmat,bmat,bmat,bmat,fmat,bmat]);
-  const ph=Math.PI-0.24,n=snapNormal(ph),c=snapPt(ph,(y0+y1)/2,r).addScaledVector(n,0.2);
-  box.position.copy(c);box.lookAt(c.clone().add(n));scene.add(box);
-  // loose tail of webbing past the buckle
-  const tail=new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.85),mat);const tp=Math.PI-0.39,tn=snapNormal(tp);
-  tail.position.copy(snapPt(tp,(y0+y1)/2,r).addScaledVector(tn,0.12));tail.lookAt(tail.position.clone().add(tn));scene.add(tail);
-})();
-if(!CAMP&&!BUCKET&&!VISOR)(function(){
   const up=new THREE.Vector3(0,1,0),yMid=(SNAP.y0+SNAP.y1)/2;
   const stem=new THREE.CylinderGeometry(0.17,0.17,1,18);
   const dome=new THREE.SphereGeometry(1,28,14,0,TAU,0,Math.PI/2);
@@ -1495,46 +1485,85 @@ if(!CAMP&&!BUCKET&&!VISOR)(function(){
     if(snapped){ add(stem,ph,baseR,0.09,1,0.2); add(dome,ph,R_OUT,0.0,0.235,0.11); }
     else{ add(stem,ph,baseR,0.07,0.9,0.16); add(dome,ph,baseR,0.14,0.2,0.1); }
   });
-})();
-
-if(VISOR)(function(){ // hook-and-loop closure: a fabric strap behind the band's ends, with a loop tab laid over it
-  const fab=(ph0,ph1,r,y0,y1,round,border)=>{
-    const N=90,arc=(ph1-ph0)*A*r,PX=90,cw=Math.round(arc*PX),chh=Math.round((y1-y0)*PX),rr=chh/2;
-    const c=newCanvasSimple(cw,chh),g=c.getContext('2d');g.fillStyle='#ffffff';g.beginPath();
-    if(round){g.moveTo(0,0);g.lineTo(cw-rr,0);g.arc(cw-rr,rr,rr,-Math.PI/2,Math.PI/2);g.lineTo(0,chh);}else g.rect(0,0,cw,chh);
-    g.closePath();g.fill();
-    g.globalCompositeOperation='source-atop';
-    g.strokeStyle='rgba(0,0,0,0.07)';g.lineWidth=1;for(let y=2;y<chh;y+=4){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();} // twill
-    if(border){g.strokeStyle='rgba(0,0,0,0.32)';g.lineWidth=3;g.setLineDash([12,7]);const m=12;g.beginPath();
-      if(round){g.moveTo(0,m);g.lineTo(cw-rr,m);g.arc(cw-rr,rr,rr-m,-Math.PI/2,Math.PI/2);g.lineTo(0,chh-m);}else g.rect(m,m,cw-2*m,chh-2*m);g.stroke();g.setLineDash([]);}
-    const gr=g.createLinearGradient(0,0,0,chh);gr.addColorStop(0,'rgba(0,0,0,0.14)');gr.addColorStop(0.1,'rgba(0,0,0,0)');gr.addColorStop(0.9,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,0.16)');
-    g.fillStyle=gr;g.fillRect(0,0,cw,chh);g.globalCompositeOperation='source-over';
-    const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
-    const pos=[],uv=[],idx=[],rIn=r-0.12/A;
-    const band=(rad,flip)=>{const base=pos.length/3;
-      for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const y of[y0,y1]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,(y-y0)/(y1-y0));}}
-      for(let k=0;k<N;k++){const a=base+2*k;if(!flip)idx.push(a,a+2,a+1,a+1,a+2,a+3);else idx.push(a,a+1,a+2,a+1,a+3,a+2);}};
-    band(r,false);band(rIn,true);
-    for(const [y,v] of[[y0,0.004],[y1,0.996]]){const base=pos.length/3;
-      for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const rad of[r,rIn]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,v);}}
-      for(let k=0;k<N;k++){const a=base+2*k;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
-    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-    geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
-    const mat=strapMat.clone();mat.map=tex;mat.color=strapMat.color;mat.roughness=0.9;
-    const m=new THREE.Mesh(geo,mat);m.castShadow=true;scene.add(m);return m;};
-  if(HV){ // high visor: a fabric strap doubled back through two metal slides
-    fab(Math.PI-0.84,Math.PI+0.84,0.95,0.45,2.65,false,false);
-    fab(Math.PI-0.48,Math.PI+0.12,0.975,0.45,2.65,false,true);
-    const metal=new THREE.MeshStandardMaterial({color:0xc9ccd0,metalness:0.85,roughness:0.32});
-    for(const ph of[Math.PI-0.5,Math.PI+0.3]){const n=snapNormal(ph),c=snapPt(ph,1.55,1.0),grp=new THREE.Group();
-      for(const [w,h,x,y] of[[0.12,2.6,-0.2,0],[0.12,2.6,0.2,0],[0.52,0.12,0,1.24],[0.52,0.12,0,-1.24],[0.1,2.4,0,0]])
-        {const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.09),metal);m.position.set(x,y,0);grp.add(m);}
-      grp.position.copy(c);grp.lookAt(c.clone().add(n));scene.add(grp);}
-  }else{
-  fab(Math.PI-0.84,Math.PI+0.84,0.95,0.3,2.3,false,false);   // strap running behind both ends of the band
-  fab(Math.PI-0.5,Math.PI+0.36,0.985,0.26,2.34,true,true);        // loop tab pressed over it, stitched all round
-  }
-})();
+}
+// a fabric, leather or webbing strap following the back of the crown; kind sets the surface
+function fab(ph0,ph1,r,y0,y1,o={}){
+  const N=90,arc=(ph1-ph0)*A*r,PX=90,cw=Math.max(8,Math.round(arc*PX)),chh=Math.round((y1-y0)*PX),rr=chh/2,kind=o.kind||'fabric',round=o.round||0;
+  const c=newCanvasSimple(cw,chh),g=c.getContext('2d');g.fillStyle='#ffffff';g.beginPath();
+  if(round===1){g.moveTo(0,0);g.lineTo(cw-rr,0);g.arc(cw-rr,rr,rr,-Math.PI/2,Math.PI/2);g.lineTo(0,chh);}
+  else if(round===-1){g.moveTo(cw,0);g.lineTo(rr,0);g.arc(rr,rr,rr,-Math.PI/2,Math.PI/2,true);g.lineTo(cw,chh);}
+  else g.rect(0,0,cw,chh);
+  g.closePath();g.fill();g.globalCompositeOperation='source-atop';
+  if(kind==='leather'){ // pebbled grain, darker burnished edges and a stitched border
+    for(let k=0;k<cw*chh/30;k++){g.fillStyle=Math.random()<0.5?'rgba(0,0,0,0.07)':'rgba(255,255,255,0.08)';g.beginPath();g.arc(Math.random()*cw,Math.random()*chh,0.8+Math.random()*1.6,0,TAU);g.fill();}
+  }else if(kind==='webbing'){g.strokeStyle='rgba(0,0,0,0.22)';g.lineWidth=2;for(let x=0;x<cw;x+=6){g.beginPath();g.moveTo(x,0);g.lineTo(x,chh);g.stroke();}
+  }else{g.strokeStyle='rgba(0,0,0,0.07)';g.lineWidth=1;for(let y=2;y<chh;y+=4){g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();}} // twill
+  if(o.border||kind==='leather'){g.strokeStyle=kind==='leather'?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.32)';g.lineWidth=3;g.setLineDash([12,7]);const m=12;g.beginPath();
+    if(round===1){g.moveTo(0,m);g.lineTo(cw-rr,m);g.arc(cw-rr,rr,rr-m,-Math.PI/2,Math.PI/2);g.lineTo(0,chh-m);}
+    else if(round===-1){g.moveTo(cw,m);g.lineTo(rr,m);g.arc(rr,rr,rr-m,-Math.PI/2,Math.PI/2,true);g.lineTo(cw,chh-m);}
+    else{g.moveTo(0,m);g.lineTo(cw,m);g.moveTo(0,chh-m);g.lineTo(cw,chh-m);}g.stroke();g.setLineDash([]);}
+  const gr=g.createLinearGradient(0,0,0,chh),e=kind==='leather'?0.3:0.15;gr.addColorStop(0,`rgba(0,0,0,${e})`);gr.addColorStop(0.1,'rgba(0,0,0,0)');gr.addColorStop(0.9,'rgba(0,0,0,0)');gr.addColorStop(1,`rgba(0,0,0,${e})`);
+  g.fillStyle=gr;g.fillRect(0,0,cw,chh);g.globalCompositeOperation='source-over';
+  const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
+  const t=o.thick||(kind==='leather'?0.18:0.12),pos=[],uv=[],idx=[],rIn=r-t/A;
+  const band=(rad,flip)=>{const base=pos.length/3;
+    for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const y of[y0,y1]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,(y-y0)/(y1-y0));}}
+    for(let k=0;k<N;k++){const a=base+2*k;if(!flip)idx.push(a,a+2,a+1,a+1,a+2,a+3);else idx.push(a,a+1,a+2,a+1,a+3,a+2);}};
+  band(r,false);band(rIn,true);
+  for(const [y,v] of[[y0,0.004],[y1,0.996]]){const base=pos.length/3;
+    for(let k=0;k<=N;k++){const ph=ph0+(ph1-ph0)*k/N;for(const rad of[r,rIn]){const p=snapPt(ph,y,rad);pos.push(p.x,p.y,p.z);uv.push(k/N,v);}}
+    for(let k=0;k<N;k++){const a=base+2*k;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
+  const mat=strapMat.clone();mat.map=tex;mat.color=strapMat.color;mat.roughness=kind==='leather'?0.55:0.9;mat.alphaTest=0.5;
+  const m=new THREE.Mesh(geo,mat);m.castShadow=true;scene.add(m);return m;
+}
+// a rectangular metal frame (slide or buckle) sitting on the strap, facing out
+function metalFrame(ph,y,r,w,h,bars){
+  const n=snapNormal(ph),c=snapPt(ph,y,r),grp=new THREE.Group(),b=0.13;
+  for(const [bw,bh,x,yy] of[[b,h,-w/2,0],[b,h,w/2,0],[w+b,b,0,h/2],[w+b,b,0,-h/2]].concat(bars?[[0.1,h-0.1,0,0]]:[]))
+    {const m=new THREE.Mesh(new THREE.BoxGeometry(bw,bh,0.1),hwMat);m.position.set(x,yy,0);grp.add(m);}
+  grp.position.copy(c);grp.lookAt(c.clone().add(n));scene.add(grp);HW_PT=HW_PT||c.clone().addScaledVector(n,0.1);return grp;
+}
+function buildClosure(){
+  if(BUCKET||FITTED)return;
+  const P=Math.PI,E=0.84,[y0,y1]=STRAP_Y,ym=(y0+y1)/2,R0=STRAP_R0,R1=STRAP_R1;
+  if(CLOSURE==='snap'){buildSnap();return;}
+  if(CLOSURE==='velcro'){ // hook side on the strap, a loop tab pressed over it, stitched all round
+    fab(P-E,P+E,R0,y0,y1);fab(P-0.5,P+0.36,R1,y0-0.04,y1+0.04,{round:1,border:true});return;}
+  if(CLOSURE==='slides'){ // strap doubled back through two metal slides
+    fab(P-E,P+E,R0,y0,y1);fab(P-0.48,P+0.12,R1,y0,y1,{border:true});
+    for(const ph of[P-0.5,P+0.3])metalFrame(ph,ym,R1+0.005,0.42,(y1-y0)+0.3,true);return;}
+  if(CLOSURE==='buckle'||CLOSURE==='leather'){ // long strap through a buckle, with its tail running on past it
+    const kind=CLOSURE==='leather'?'leather':'fabric',bx=P+0.22;
+    fab(P-E,bx+0.02,R0,y0,y1,{kind});fab(bx-0.02,P+E,R0-0.004,y0,y1,{kind});
+    fab(bx,P+0.62,R1,y0+0.06,y1-0.06,{kind,round:1});
+    metalFrame(bx,ym,R1+0.01,0.62,(y1-y0)+0.32,true);return;}
+  if(CLOSURE==='webbing'){ // nylon webbing through a plastic ladder-lock clip
+    const r=0.94,yA=VISOR?y0:0.25,yB=VISOR?y1:2.15;fab(P-0.8,P+0.8,r,yA,yB,{kind:'webbing',thick:0.06});
+    const bmat=new THREE.MeshStandardMaterial({roughness:0.4});bmat.color=pegMat.color;
+    const bc=newCanvasSimple(256,320),bg=bc.getContext('2d');bg.fillStyle='#ffffff';bg.fillRect(0,0,256,320);
+    bg.fillStyle='#8a8a8a';for(const x of[40,150])bg.fillRect(x,40,66,240);bg.strokeStyle='#666';bg.lineWidth=8;bg.strokeRect(8,8,240,304);
+    const btex=new THREE.CanvasTexture(bc);btex.encoding=THREE.sRGBEncoding;const fmat=new THREE.MeshStandardMaterial({map:btex,roughness:0.4});fmat.color=pegMat.color;
+    const box=new THREE.Mesh(new THREE.BoxGeometry(2.0,(yB-yA)+0.6,0.32),[bmat,bmat,bmat,bmat,fmat,bmat]);
+    const ph=P-0.24,n=snapNormal(ph),c=snapPt(ph,(yA+yB)/2,r).addScaledVector(n,0.2);box.position.copy(c);box.lookAt(c.clone().add(n));scene.add(box);
+    fab(P-0.4,P-0.31,r+0.012,yA+0.05,yB-0.05,{kind:'webbing',thick:0.06}); // loose tail past the clip
+    return;}
+  if(CLOSURE==='bungee'){ // shock cord laced through two grommets, pulled tight with a cord lock
+    const yc=VISOR?ym:1.5,gd=OPEN_W+0.1,cordMat=new THREE.MeshStandardMaterial({roughness:0.85});cordMat.color=strapMat.color;
+    const grom=th=>{const a=aForHeight(th,yc),q=crownPoint(th,a),n=snapNormal(th),p=new THREE.Vector3(...q).addScaledVector(n,0.03);
+      const t=new THREE.Mesh(new THREE.TorusGeometry(0.28,0.08,10,24),hwMat);t.position.copy(p);t.lookAt(p.clone().add(n));scene.add(t);HW_PT=HW_PT||p.clone();return p;};
+    const gL=grom(P-gd),gR=grom(P+gd),lock=snapPt(P+0.04,yc-0.15,1.035);
+    const mid=(a,b,k,out)=>{const v=a.clone().lerp(b,k);const ph=Math.atan2(v.x/A,v.z/B);return snapPt(ph,v.y,out);};
+    const cord=pts=>{const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),80,0.13,10,false),cordMat);m.castShadow=true;scene.add(m);};
+    cord([gL,mid(gL,lock,0.5,1.02),lock.clone().add(new THREE.Vector3(0,0.15,0))]);cord([gR,mid(gR,lock,0.5,1.02),lock.clone().add(new THREE.Vector3(0,0.15,0))]);
+    const n=snapNormal(P+0.04),barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,1.3,20),pegMat);barrel.position.copy(lock);scene.add(barrel);
+    const btn=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.3,16),pegMat);btn.position.copy(lock).addScaledVector(n,0.4);btn.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),n);scene.add(btn);
+    for(const dx of[-0.12,0.12]){const top=lock.clone().add(new THREE.Vector3(dx,-0.6,0)),end=top.clone().add(new THREE.Vector3(dx*0.5,-1.6,0)).addScaledVector(n,0.15);
+      cord([top,top.clone().lerp(end,0.5).addScaledVector(n,0.12),end]);const st=new THREE.Mesh(new THREE.SphereGeometry(0.22,14,10),pegMat);st.position.copy(end);scene.add(st);}
+    return;}
+}
+buildClosure();
 
 /* ---------- ground shadow ---------- */
 const underPos=underGeo.attributes.position;
@@ -1582,7 +1611,7 @@ SKIP_GROOVE=false;
 // (x = cm around the band from the front center, y = cm up from the bottom edge).
 const BAND={N:300,rows:10,y0:0.08,y1:(VISOR&&!HV)?2.12:2.82};
 const inTagGeo=(function(){
-  const lim=Math.PI-OPEN_W+0.02,pos=[],idx=[],flat=[],{N,rows,y0,y1}=BAND;
+  const lim=Math.min(Math.PI,Math.PI-OPEN_W+0.02),pos=[],idx=[],flat=[],{N,rows,y0,y1}=BAND;
   const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
   const ths=[];for(let i=0;i<=N;i++)ths.push(-lim+2*lim*i/N);
   // arc length around the band at mid height, measured from the front center
@@ -2084,7 +2113,7 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
     <div class="actions"><button class="btn quiet" data-act="template" id="templateBtn">Download brim template</button></div></div>`:''}
   ${key==='front'?`<div class="group"><span class="label">Brim</span><label class="check" style="margin-top:0"><input type="checkbox" id="front-onbrim"> Let the art run down onto the brim</label><p class="fitnote">Move the art down with the Up and down slider, or make it larger, and it continues from the front panel onto the top of the bill.</p></div>`:''}
   ${key==='back'?`<div class="group"><span class="label">Closure colors</span><div class="colorgrid">
-      <label><input type="color" data-color="strap"> ${VISOR?'Strap':'Snap strap'}</label><label><input type="color" data-color="binding"> Binding tape</label></div></div>`:''}
+      ${FITTED?'':`<label><input type="color" data-color="strap"> ${CLOSURE_PART()}</label>`}${HAS_HW?'<label><input type="color" data-color="hardware"> Hardware</label>':''}${FITTED?'':'<label><input type="color" data-color="binding"> Binding tape</label>'}</div>${FITTED?'<p class="fitnote">Fitted: the back is closed, so there is no strap. Change the closure in the Style tab.</p>':''}</div>`:''}
   ${key==='inside'?`<div class="group"><span class="label">Inside colors</span><div class="colorgrid">
       <label><input type="color" data-color="lining"> Lining</label><label><input type="color" data-color="tape"> Seam tape</label>
       <label><input type="color" data-color="sweat"> Sweatband</label></div>
@@ -2359,7 +2388,7 @@ function applyColors(){
   paintCrown();paintBrim();
   tapeMat.color.copy(lin(eff('tape')));paintTape();sweatMat.color.copy(lin(eff('sweat')));
   ropeMat.color.copy(lin(colors.rope));
-  if(!CAMP&&!SIX&&!FLAT&&!BUCKET&&!HV)underMat.color.copy(lin(colors.under));edgeMat.color.copy(lin(colors.brim));buttonMat.color.copy(lin(colors.button));strapMat.color.copy(lin(colors.strap));visorEdgeMat.color.copy(lin(shade(colors.crown,isDark(colors.crown)?0.05:-0.05)));pegMat.color.copy(lin(shade(colors.strap,isDark(colors.strap)?0.06:-0.06)));
+  if(!CAMP&&!SIX&&!FLAT&&!BUCKET&&!HV)underMat.color.copy(lin(colors.under));edgeMat.color.copy(lin(colors.brim));buttonMat.color.copy(lin(colors.button));strapMat.color.copy(lin(colors.strap));visorEdgeMat.color.copy(lin(shade(colors.crown,isDark(colors.crown)?0.05:-0.05)));pegMat.color.copy(lin(shade(colors.strap,isDark(colors.strap)?0.06:-0.06)));hwMat.color.copy(lin(eff('hardware')));
   dirty=true;
 }
 
@@ -2429,7 +2458,7 @@ function colorSpecRows(){
   if(!CAMP&&!BUCKET&&!VISOR)add('Crown','Top button',colors.button);
   add('Brim','Brim top',colors.brim);add('Brim','Underbrim',colors.under);add('Brim','Brim stitching',eff('stitchBrim'));
   if(ropeOn)add('Brim','Rope',colors.rope);
-  if(!BUCKET){add('Closure',CAMP?'Webbing strap and buckle':VISOR?(HV?'Adjustable strap':'Hook-and-loop strap'):'Snap strap',colors.strap);add('Closure','Binding tape',eff('binding'));}
+  if(!BUCKET&&!FITTED){add('Closure',CLOSURES[CLOSURE]+': '+CLOSURE_PART().toLowerCase(),colors.strap);if(HAS_HW)add('Closure','Hardware',eff('hardware'));add('Closure','Binding tape',eff('binding'));}
   add('Inside','Lining',eff('lining'));add('Inside','Seam tape',eff('tape'));add('Inside','Sweatband',eff('sweat'));
   if((tapeText.text||'').trim())add('Inside','Tape text',tapeText.color);
   for(const k of ZONE_KEYS){const z=ZONES[k];if(!z.tex)continue;const where=z.title||k;
@@ -2588,8 +2617,9 @@ function calloutItems(){
   add('Underbrim',[colors.under],{p:V(...brimSurf(BUCKET?0.5:0.35,0.6,-BT-0.05)),n:V(0,-1,0)},UNDER);
   // closure
   if(!BUCKET){
-    add(CAMP?'Webbing strap':VISOR?(HV?'Adjustable strap':'Hook-and-loop strap'):'Snap strap',[colors.strap],{p:snapPt(Math.PI+0.15,1.1,CAMP?0.95:VISOR?1.0:R_OUT+0.01),n:V(0,0,-1)},['back']);
-    add('Binding tape',[eff('binding')],onCrown(Math.PI-OPEN_W*0.55,openA(OPEN_W*0.55)+0.012,0.05),['back']);
+    if(!FITTED){add(CLOSURE_PART(),[colors.strap],CLOSURE==='bungee'?{p:snapPt(Math.PI+0.04,(VISOR?(STRAP_Y[0]+STRAP_Y[1])/2:1.5)-0.15,1.07),n:V(0,0,-1)}:{p:snapPt(Math.PI-0.1,CLOSURE==='snap'?1.1:(STRAP_Y[0]+STRAP_Y[1])/2,(CLOSURE==='snap'?R_OUT:STRAP_R1)+0.01),n:V(0,0,-1)},['back']);
+    if(HAS_HW&&HW_PT)add('Hardware',[eff('hardware')],{p:HW_PT.clone(),n:V(HW_PT.x,0,HW_PT.z).normalize()},['back']);}
+    if(!FITTED)add('Binding tape',[eff('binding')],onCrown(Math.PI-OPEN_W*0.55,openA(OPEN_W*0.55)+0.012,0.05),['back']);
   }
   // inside
   add('Sweatband',[eff('sweat')],inside(0.35,1.4,0.3),UNDER);
@@ -2800,12 +2830,12 @@ function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(
 function serializeDesign(){
   const zones={};
   for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=imageToDataURL(z.image);zones[k]=o;}
-  return{style:STYLE,colors:{...colors},perforated,ropeOn,zones,tapeText:{...tapeText},dims:dimsNow()};
+  return{style:STYLE,colors:{...colors},perforated,ropeOn,zones,tapeText:{...tapeText},dims:dimsNow(),closure:CLOSURE};
 }
 async function restoreDesign(d){
   if(!d||!d.zones)throw new Error('bad');
   if(d.style&&d.style!==STYLE){await switchStyle(d.style,d);return;} // a design made in the other style
-  if(d.dims&&dimsDiffer(d.dims)){await rebuildHat(d.dims,d);return;} // a design made at other sizes
+  if((d.dims&&dimsDiffer(d.dims))||(d.closure&&d.closure!==CLOSURE&&CLOSURE_OPTS.includes(d.closure))){await rebuildHat(d.dims||dimsNow(),d);return;} // a design made at other sizes, or with another closure
   if(d.zones.side&&!d.zones.left){const o=d.zones.side,w=o.which||'left',empty={...o,source:null,image:null,text:''};
     d.zones.left=(w==='left'||w==='both')?o:empty;d.zones.right=(w==='right'||w==='both')?o:empty;}
   Object.assign(colors,PANEL_RESET,d.colors||{});
@@ -2944,6 +2974,7 @@ async function switchStyle(next,design){
     if(design&&design.dims&&design.style===next)sessionStorage.setItem('capDims',JSON.stringify(Object.assign({},design.dims,{style:next})));
     else sessionStorage.setItem('capDims',JSON.stringify({style:next,head:MEAS.head}));
     if(!dimSet('head')&&!(design&&design.dims&&design.style===next))sessionStorage.removeItem('capDims');
+    if(design&&design.closure&&design.style===next)sessionStorage.setItem('capClosure',JSON.stringify({style:next,closure:design.closure}));else sessionStorage.removeItem('capClosure');
   }catch(e){}
   try{sessionStorage.setItem('capStyle',next);sessionStorage.setItem('capResume','1');}catch(e){toast('Switching cap styles isn’t available in this view.');return;}
   try{await IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d});}catch(e){}
@@ -2957,17 +2988,37 @@ if(!TRUCK)$('#meshColorLabel').hidden=true;
 if(TRUCK||VISOR){const pl=$('#perfToggle');if(pl&&pl.closest('label'))pl.closest('label').hidden=true;}
 $('#styleNote').textContent=HV?'High crown visor: a tall, seamless band that leans back over the forehead and tapers toward the back, a bound top edge, a curved bill with a contrast underside, and an adjustable strap with metal slides.':VISOR?'Low crown visor: an open-top band, tallest over the forehead and tapering toward the back, with temple seams, a pre-curved stitched bill, a mesh sweatband and a hook-and-loop strap.':FLAT?'Flat brim snapback: a high, structured six-panel crown with a center front seam, an eyelet on every panel, a flat stitched bill and a snap closure.':BUCKET?'Bucket hat: a tapered crown with a flat top panel, a laser-perforated band, and a brim that slopes down all the way around. No closure or top button.':DAD?'Unstructured dad hat: six soft panels with no buckram, so the crown relaxes and sits low, with an eyelet on each panel, a gently curved bill and a snap closure.':SIX?'High-profile 6-panel: a tall, upright front panel under an arched seam, a top panel, teardrop laser-perforated sides and back, a flat bill and a snap closure.':TRUCK?'Classic six-panel trucker: structured front panels split by a center seam, breathable mesh sides and back, a curved bill and a snap closure.':CAMP?'Soft, low camp cap: one front panel under an arched seam, side panels with eyelets, a flat bill and a webbing strap with a buckle.'
   :'Structured A-frame 5-panel with a curved bill and a snap closure. Switching keeps your artwork, colors and settings.';
+/* ---------- closure picker ---------- */
+(function(){
+  const grp=$('#closureGroup');if(!grp)return;if(!CLOSURE_OPTS.length){grp.hidden=true;return;}
+  const NOTES={snap:'Plastic snap strap: an outer strap with a row of holes that snaps onto pegs on the inner strap.',
+    velcro:'Hook-and-loop strap: a fabric strap with a stitched loop tab that presses onto it.',
+    buckle:'Fabric strapback: a cloth strap that runs through a metal buckle, with the tail passing on past it.',
+    leather:'Leather strapback: a stitched leather strap through a metal buckle.',
+    slides:'Strap with slides: a fabric strap doubled back through two metal slides.',
+    webbing:'Webbing and clip: nylon webbing through a plastic ladder-lock clip.',
+    bungee:'Bungee cord: elastic cord laced through two metal grommets and pulled tight with a cord lock.',
+    fitted:'Fitted: a closed back with no opening or strap, sewn to one head size.'};
+  const seg=$('#closureSeg');
+  for(const c of CLOSURE_OPTS){const b=document.createElement('button');b.textContent=CLOSURES[c];b.dataset.closure=c;b.setAttribute('aria-pressed',String(c===CLOSURE));seg.appendChild(b);}
+  $('#closureNote').textContent=NOTES[CLOSURE]||'';
+  seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=b.dataset.closure;if(c===CLOSURE)return;
+    const d=serializeDesign();d.closure=c;d.colors=Object.assign({},d.colors);
+    if(c==='leather'&&CLOSURE!=='leather'){d.colors.strap='#6B4226';d.colors.hardware='#B8913F';} // saddle leather and brass to start
+    toast('Changing the closure to '+CLOSURES[c].toLowerCase()+'…');rebuildHat(dimsNow(),d);});
+})();
+
 /* ---------- dimension controls ---------- */
 function dimsNow(){const m=MEAS,o={head:+m.head.toFixed(4),crown:+m.crown.toFixed(4),billL:+m.billL.toFixed(4)};if(!BUCKET)o.billW=+m.billWFlat.toFixed(4);return o;}
 function dimsDiffer(d){const n=dimsNow();return Object.keys(n).some(k=>typeof d[k]==='number'&&Math.abs(d[k]-n[k])>0.005);}
 async function rebuildHat(dims,design){
   const d=design?JSON.parse(JSON.stringify(design)):serializeDesign();d.style=STYLE;d.dims=Object.assign({},dims);
-  const sig=JSON.stringify(dims);
+  const cl=(design&&CLOSURE_OPTS.includes(design.closure))?design.closure:CLOSURE,sig=JSON.stringify([dims,cl]);d.closure=cl;
   try{if(RESUMING&&sessionStorage.getItem('capDimsLast')===sig)return;sessionStorage.setItem('capDimsLast',sig);}catch(e){} // never rebuild in a loop
-  try{sessionStorage.setItem('capDims',JSON.stringify(Object.assign({},dims,{style:STYLE})));sessionStorage.setItem('capStyle',STYLE);sessionStorage.setItem('capResume','1');}
+  try{sessionStorage.setItem('capDims',JSON.stringify(Object.assign({},dims,{style:STYLE})));sessionStorage.setItem('capClosure',JSON.stringify({style:STYLE,closure:cl}));sessionStorage.setItem('capStyle',STYLE);sessionStorage.setItem('capResume','1');}
   catch(e){toast('Changing sizes isn’t available in this view.');return;}
   try{await IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d});}catch(e){}
-  toast('Rebuilding the hat at the new sizes…');setTimeout(()=>location.reload(),60);
+  toast('Rebuilding the hat…');setTimeout(()=>location.reload(),60);
 }
 // inches to the nearest 1/16, as a fraction
 function fracIn(cm){const t=Math.round(cm/IN_CM*16),w=Math.floor(t/16);let n=t%16,dd=16;while(n&&n%2===0){n/=2;dd/=2;}return(n?(w?w+' ':'')+n+'/'+dd:String(w))+' in';}

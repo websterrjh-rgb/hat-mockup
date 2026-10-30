@@ -140,6 +140,14 @@ input[type="color"]{width:40px;height:38px;border:1px solid var(--rule);border-r
 .check{display:flex;align-items:center;gap:9px;font-size:13.5px;margin-top:12px}
 .check input{width:17px;height:17px;accent-color:var(--accent)}
 .status{font-size:12.5px;color:var(--muted);margin-top:8px}
+.dimrows{display:flex;flex-direction:column;gap:12px}
+.dimrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 8px;align-items:center}
+.dimrow .dname{font-size:13.5px;font-weight:600}
+.dimrow .dhint{grid-column:1 / -1;font-size:12px;color:var(--muted);line-height:1.35}
+.dimrow label{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+.dimrow input{width:76px;font:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--rule);border-radius:9px;padding:7px 8px;font-variant-numeric:tabular-nums}
+.dimrow input[aria-invalid="true"]{border-color:#B02C24}
+.dimrow .dmeta{grid-column:1 / -1;font-size:12px;color:var(--accent);font-weight:600}
 
 /* shared 3D viewer: just the hat */
 body.viewer .app{grid-template-columns:1fr;grid-template-rows:1fr;height:100%}
@@ -338,7 +346,7 @@ body.viewer #stitchBtn{display:none}
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
       <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
-      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus labeled color callout sheets and a color spec with HEX and Pantone codes">Save PNGs</button>
+      <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus labeled color callout sheets, a to-scale dimension sheet, and color and size specs">Save PNGs</button>
     </div>
     <nav class="views" aria-label="Camera views">
       <button data-view="front">Front</button>
@@ -369,6 +377,12 @@ body.viewer #stitchBtn{display:none}
           <span class="label">Cap style</span>
           <div class="seg" id="styleSeg"><button data-style="5panel">5-panel</button><button data-style="camp">Camp cap</button><button data-style="trucker">Trucker</button><button data-style="sixpanel">6-panel</button><button data-style="flat">Flat brim</button><button data-style="dad">Dad hat</button><button data-style="bucket">Bucket hat</button><button data-style="visor">Low visor</button><button data-style="hvisor">High visor</button></div>
           <p class="fitnote" id="styleNote"></p>
+        </div>
+        <div class="group" id="dimGroup">
+          <span class="label">Dimensions</span>
+          <div class="dimrows" id="dimRows"></div>
+          <div class="actions" style="margin-top:12px"><button class="btn primary" id="dimApply" disabled>Apply sizes</button><button class="btn quiet" id="dimReset">Standard size</button></div>
+          <p class="fitnote" id="dimNote">Every size is measured on the 3D model. Save PNGs adds a dimension sheet with all of them for your supplier.</p>
         </div>
         <div class="group">
           <span class="label">Match my design</span>
@@ -745,7 +759,20 @@ try{
 if(!STUDIO_OK){scene.children.forEach(o=>{if(o.isHemisphereLight)o.intensity=0.78;});key.intensity=0.82;fill.intensity=0.32;rim.intensity=0.22;}
 
 /* ---------- crown geometry ---------- */
-const A=8.1,B=10.0,H=VISOR?(HV?6.93:4.75):CAMP?10.0:TRUCK?10.5:SIX?10.3:FLAT?10.4:DAD?9.4:BUCKET?8.0:9.5;
+/* ---------- dimensions ----------
+   Every style starts at its standard size. Head size, crown height, bill length and bill width can be set
+   (in the Style tab); the targets are kept for this style in the session and the hat is rebuilt from them,
+   and every number on the dimension sheet is measured back off the finished model. */
+const H_DEF=VISOR?(HV?6.93:4.75):CAMP?10.0:TRUCK?10.5:SIX?10.3:FLAT?10.4:DAD?9.4:BUCKET?8.0:9.5;
+function ellipsePerim(a,b){let L=0,px=0,pz=b;for(let i=1;i<=20000;i++){const t=TAU*i/20000,x=a*Math.sin(t),z=b*Math.cos(t);L+=Math.hypot(x-px,z-pz);px=x;pz=z;}return L;}
+const HEAD_DEF=ellipsePerim(8.1,10.0);
+const DIM_LIMITS={head:[48,66],crown:[2,18],billL:[2,14],billW:[8,32]};
+let DIM_T={};try{const d=JSON.parse(sessionStorage.getItem('capDims')||'null');if(d&&typeof d==='object'){
+  if(d.style===STYLE)DIM_T=d;else if(typeof d.head==='number')DIM_T={head:d.head};}}catch(e){}
+const dimSet=k=>typeof DIM_T[k]==='number'&&isFinite(DIM_T[k])&&DIM_T[k]>=DIM_LIMITS[k][0]&&DIM_T[k]<=DIM_LIMITS[k][1];
+const HEAD_STD=23.125*2.54; // standard one-size-fits-most cap: 7 3/8 fitted (23 1/8 in, 58.7 cm), the middle of the usual 7 to 7 3/4 adjustable range
+const HEAD_K=(dimSet('head')?DIM_T.head:HEAD_STD)/HEAD_DEF;
+const A=8.1*HEAD_K,B=10.0*HEAD_K,H=dimSet('crown')?DIM_T.crown:H_DEF,RM=9*HEAD_K,CROWN_K=H/H_DEF;
 // Seam angles (front = 0). Front panel spans +/-1.18 rad, then four equal panels.
 const SEAM_TH=VISOR?[1.22,2.3,Math.PI]:BUCKET?[1.2,2.2,Math.PI]:CAMP?[0.8,Math.PI-0.75,Math.PI]:(TRUCK||DAD||FLAT)?[1.05,2.09,Math.PI]:SIX?[0.92,1.95,Math.PI]:[1.18,2.16,Math.PI];
 // Camp cap seams, in (angle around the crown, height parameter a): the front panel is bounded by an arch,
@@ -757,8 +784,8 @@ function aForHeight(th,y){let lo=0,hi=1;for(let i=0;i<24;i++){const m=(lo+hi)/2;
 let BUCKET_TOP=1; // where the bucket's side band meets the top panel (set once the crown shape exists)
 // arch traced from the front view: nearly level across the middle, dropping toward the side seams
 const sixArch=th=>{const t=Math.min(1,Math.abs(th)/SEAM_TH[0]);return aForHeight(th,H*(0.78-0.24*t*t));};
-const campArch=th=>aForHeight(th,5.8+1.1*Math.cos(Math.min(1,Math.abs(th)/CAMP_F)*Math.PI/2));
-const campSideTop=th=>{const t=Math.min(1,Math.max(0,(Math.abs(th)-CAMP_F)/(CAMP_BK-CAMP_F)));return aForHeight(th,5.8+2.2*Math.pow(Math.sin(Math.PI*t),0.7));};
+const campArch=th=>aForHeight(th,(5.8+1.1*Math.cos(Math.min(1,Math.abs(th)/CAMP_F)*Math.PI/2))*CROWN_K);
+const campSideTop=th=>{const t=Math.min(1,Math.max(0,(Math.abs(th)-CAMP_F)/(CAMP_BK-CAMP_F)));return aForHeight(th,(5.8+2.2*Math.pow(Math.sin(Math.PI*t),0.7))*CROWN_K);};
 let CENTER_A=2; // where the partial front seam stops (a-param); set below
 // Artwork on the outside bridges over seams the way a print, patch or embroidery does,
 // so the surfaces that carry it are built without the seam grooves.
@@ -801,7 +828,7 @@ function panelShape(th,a){
 /* Crown shape, matched to the reference photos: every meridian runs from the base edge up to the button.
    The front meridian is the A-frame profile (a straight front panel leaning back, a rounded corner,
    then a straight slope up to the button set back near mid-crown); sides and back are rounded arches. */
-const ZA=HV?-6:(BUCKET||VISOR)?0:CAMP?-0.9:TRUCK?0.1:SIX?-0.45:FLAT?-0.2:DAD?-0.6:0.75; // top of the crown (button position on the 5-panel), front-to-back (base runs from z=+10 to z=-10)
+const ZA=(HV?-6:(BUCKET||VISOR)?0:CAMP?-0.9:TRUCK?0.1:SIX?-0.45:FLAT?-0.2:DAD?-0.6:0.75)*HEAD_K; // top of the crown (button position on the 5-panel), front-to-back (base runs from z=+10 to z=-10)
 const PN=400;
 function resampleProfile(pts){
   const d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
@@ -988,7 +1015,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     g.save();g.globalCompositeOperation='destination-out';g.fillStyle='#000';
     const pitch=0.24,r=0.085,da=pitch*0.87/PROFILE_CM;let row=0;
     for(let a=0.025;a<=0.93;a+=da,row++){
-      const sA=crownS(a);if(sA<0.12)continue;const R=9.0*sA,dth=pitch/R,rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM,off=(row%2)*dth/2;
+      const sA=crownS(a);if(sA<0.12)continue;const R=RM*sA,dth=pitch/R,rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM,off=(row%2)*dth/2;
       for(const sg of[1,-1])for(let th=SEAM_TH[0]+0.05+off;th<Math.PI-0.03;th+=dth){
         if(Math.abs(th-SEAM_TH[1])<0.045)continue;
         const d=Math.PI-th;if(d<OPEN_W+0.12&&a<archA(Math.max(0,d),OPEN_W+0.1,OPEN_A+0.04))continue;
@@ -999,7 +1026,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
   if(BUCKET&&perforated){ // laser-perforated band around the lower crown, in a staggered diamond pattern
     g.fillStyle=dark?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.3)';
     const a0=aForHeight(0,H*0.12),a1=aForHeight(0,H*0.4),pitch=0.55,r=0.11,da=pitch/PROFILE_CM;let row=0;
-    for(let a=a0;a<=a1;a+=da,row++){const sA=crownS(a),R=9.0*sA,dth=pitch/R,rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM,off=(row%2)*dth/2;
+    for(let a=a0;a<=a1;a+=da,row++){const sA=crownS(a),R=RM*sA,dth=pitch/R,rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM,off=(row%2)*dth/2;
       for(let th=-Math.PI+off;th<Math.PI;th+=dth){const at=Math.abs(th);if(at<0.14||Math.PI-at<0.14)continue;
         const k=Math.floor((th+Math.PI)/(dth*7))%2;if(k&&row%3===1)continue; // breaks the rows into a diamond rhythm
         g.beginPath();g.ellipse(uX(th),aY(a),rx,ry,0,0,TAU);g.fill();}}
@@ -1013,7 +1040,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     let row=0;
     for(let a=SIX?0.05:0.1;a<=(SIX?0.9:0.8);a+=da,row++){
       const s=crownS(a);if(s<0.25)continue;
-      const R=9.0*s,dth=pitch/R;
+      const R=RM*s,dth=pitch/R;
       const rx=r*CW/(TAU*R),ry=r*CH/PROFILE_CM;
       const off=(row%2)*dth/2;
       for(const sign of[1,-1]){
@@ -1063,7 +1090,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     curve(path(a=>[uX(0),aY(a)],campArch(0),1));                                     // center seam, front half
     // eyelets: two on each side panel
     for(const sg of[1,-1])for(const th of[1.5,1.94]){
-      const a=aAtHeight(sg*th,3.6),R=9*crownS(a),rx=CW/(TAU*R),ry=CH/PROFILE_CM,x=uX(sg*th),y=aY(a);
+      const a=aAtHeight(sg*th,3.6*CROWN_K),R=RM*crownS(a),rx=CW/(TAU*R),ry=CH/PROFILE_CM,x=uX(sg*th),y=aY(a);
       g.fillStyle=stitch;g.beginPath();g.ellipse(x,y,0.3*rx,0.3*ry,0,0,TAU);g.fill();
       g.fillStyle=shade(base,-0.55);g.beginPath();g.ellipse(x,y,0.13*rx,0.13*ry,0,0,TAU);g.fill();}
   }else{
@@ -1079,7 +1106,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
    for(const o of[-22,22])stitchRow(x+o,CH*0.04,yEnd+10);
    if(!TRUCK&&!DAD&&!FLAT){g.setLineDash([]);g.strokeStyle=stitch;g.lineWidth=5;g.beginPath();g.moveTo(x-30,yEnd+12);g.lineTo(x+30,yEnd+12);g.stroke();}}
    if(TRUCK||DAD||FLAT)for(const sg of[1,-1])for(const th0 of(DAD||FLAT)?[0.52,1.57,2.62]:[0.52]){ // embroidered eyelets near the top (every panel on the dad hat)
-     const th=sg*th0,a=aAtHeight(th,H*0.8),R=9*crownS(a),rx=CW/(TAU*R),ry=CH/PROFILE_CM,x=uX(th),y=aY(a);
+     const th=sg*th0,a=aAtHeight(th,H*0.8),R=RM*crownS(a),rx=CW/(TAU*R),ry=CH/PROFILE_CM,x=uX(th),y=aY(a);
      g.fillStyle=FLAT&&!colors.stitchCrown?shade(base,dark?0.12:-0.18):stitch;g.beginPath();g.ellipse(x,y,0.25*rx,0.25*ry,0,0,TAU);g.fill();
      g.fillStyle=shade(base,-0.5);g.beginPath();g.ellipse(x,y,0.1*rx,0.1*ry,0,0,TAU);g.fill();}
   }
@@ -1214,10 +1241,17 @@ function paintTape(){
 /* sweatband: a band just inside the crown base, running from one side of the snap opening to the other */
 const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.95,side:THREE.DoubleSide,envMapIntensity:0.6});
 (function(){
-  const N=220,lim=Math.PI-OPEN_W+0.02,ys=(VISOR&&!HV)?[0.02,0.75,1.5,2.2]:[0.02,0.9,1.9,2.9],pos=[],idx=[];
+  const N=360,lim=Math.PI-OPEN_W+0.02,ys=(VISOR&&!HV)?[0.02,0.1,0.75,1.5,2.4]:[0.02,0.1,0.9,1.9,2.9],pos=[],idx=[];
+  // Inside the back, the closure strap's ends are sewn between the crown and the sweatband, so the band steps in
+  // just past the strap and covers its ends. From inside you see clean sweatband right up to the opening.
+  const SB=BUCKET?null:CAMP?{r:0.94-0.012,ext:0.8}:VISOR?{r:0.95-0.12/A-0.008,ext:0.84}:{r:0.923-0.14/A-0.008,ext:0.84};
   const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
   for(let i=0;i<=N;i++){const th=-lim+2*lim*i/N;let nx=Math.sin(th)/A,nz=Math.cos(th)/B;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
-    for(const y of ys){const p=crownPoint(th,aFor(th,y)),inset=0.16+0.04*Math.sin(Math.PI*y/3);pos.push(p[0]-nx*inset,y,p[2]-nz*inset);}}
+    const d=Math.PI-Math.abs(Math.atan2(Math.sin(th),Math.cos(th))); // angle from the back center
+    const w=SB?(d<SB.ext+0.03?1:d>SB.ext+0.25?0:(t=>1-t*t*(3-2*t))((d-SB.ext-0.03)/0.22)):0;
+    ys.forEach((y,j)=>{const p=crownPoint(th,aFor(th,y)),inset=0.16+0.04*Math.sin(Math.PI*y/3);let x=p[0]-nx*inset,z=p[2]-nz*inset;
+      if(w>0&&j>0){const rs=Math.hypot(x/A,z/B);if(rs>SB.r){const tx=A*Math.sin(th)*SB.r,tz=B*Math.cos(th)*SB.r;x+=(tx-x)*w;z+=(tz-z)*w;}}
+      pos.push(x,y,z);});}
   const R=ys.length;
   for(let i=0;i<N;i++)for(let j=0;j<R-1;j++){const a=i*R+j,b=a+R;idx.push(a,b,a+1,a+1,b,b+1);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
@@ -1228,11 +1262,16 @@ const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness
 const THB=BUCKET?Math.PI:VISOR?1.2:CAMP?1.15:1.1,LB=8.1,NB=BUCKET?240:110,NW=26,BT=0.12;
 // Flat pattern of the bill (what gets printed / what the template shows)
 // Outer edge is a squared-off superellipse: flat front, straight sides, ending where the brim meets the crown.
-const BRIM_RX=HV?8.4:VISOR?8.3:CAMP?8.0:SIX?7.3:FLAT?7.4:DAD?7.8:7.6,BRIM_M=HV?2.4:VISOR?2.5:CAMP?2.6:SIX?3.0:FLAT?2.8:DAD?2.6:3.0,BRIM_TIP=HV?16.43:VISOR?16.03:CAMP?16.15:SIX?15.6:FLAT?15.9:DAD?16.6:15.94;
-const BRIM_O=(function(){const ex=A*Math.sin(THB)*0.985,ez=B*Math.cos(THB)*0.985;
+const BRIM_M=HV?2.4:VISOR?2.5:CAMP?2.6:SIX?3.0:FLAT?2.8:DAD?2.6:3.0;
+// standard bill for this style, kept in proportion with the head size; a set bill width or length replaces these below
+let BRIM_RX=(HV?8.4:VISOR?8.3:CAMP?8.0:SIX?7.3:FLAT?7.4:DAD?7.8:7.6)*HEAD_K,BRIM_TIP=(HV?16.43:VISOR?16.03:CAMP?16.15:SIX?15.6:FLAT?15.9:DAD?16.6:15.94)+(B-10)*0.985;
+const BRIM_RX_MIN=A*Math.sin(THB)*0.985+0.05; // the bill must reach past the crown where it ends
+let BRIM_O=null;
+function setBrimO(){BRIM_RX=Math.max(BRIM_RX,BRIM_RX_MIN);const ex=A*Math.sin(THB)*0.985,ez=B*Math.cos(THB)*0.985;
   const k=Math.pow(1-Math.pow(ex/BRIM_RX,BRIM_M),1/BRIM_M),Rz=(BRIM_TIP-ez)/(1+k);
-  return{Rz,zc:BRIM_TIP-Rz,psiE:Math.PI-Math.acos(Math.pow(k,BRIM_M/2))};})();
-const BUCKET_W=5.6; // bucket brim width all the way around (cm)
+  BRIM_O={Rz,zc:BRIM_TIP-Rz,psiE:Math.PI-Math.acos(Math.pow(k,BRIM_M/2))};}
+setBrimO();
+let BUCKET_W=5.6; // bucket brim width all the way around (cm)
 function brimFlat(th,w){
   const ix=A*Math.sin(th)*0.985,iz=B*Math.cos(th)*0.985;
   if(BUCKET){const ox=(A+BUCKET_W)*Math.sin(th),oz=(B+BUCKET_W)*Math.cos(th);return[ix+(ox-ix)*w,iz+(oz-iz)*w,Math.hypot(ox-ix,oz-iz)];}
@@ -1268,6 +1307,41 @@ function brimGeo(dy,up){
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
 }
+/* measurements, read off the model itself */
+const IN_CM=2.54;
+function billCenter(){ // top of the bill along its center line, from where it leaves the crown to the tip
+  const yb=BT,cz=crownPoint(0,aForHeight(0,yb))[2],N=6000,pts=[];let prev=brimSurf(0,0,BT),started=false;
+  for(let i=1;i<=N;i++){const q=brimSurf(0,i/N,BT);
+    if(!started){if(q[2]>=cz){const f=(cz-prev[2])/((q[2]-prev[2])||1);pts.push([prev[0]+(q[0]-prev[0])*f,prev[1]+(q[1]-prev[1])*f,cz]);started=true;}else{prev=q;continue;}}
+    pts.push(q);prev=q;}
+  let L=0;for(let i=1;i<pts.length;i++)L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1],pts[i][2]-pts[i-1][2]);
+  return{pts,len:L,cz};
+}
+function measureHat(){
+  const m={},N=4000;
+  m.head=ellipsePerim(A,B);
+  m.crown=crownPoint(0,1)[1];
+  let L=0,p=crownPoint(0,0);for(let i=1;i<=N;i++){const q=crownPoint(0,i/N);L+=Math.hypot(q[0]-p[0],q[1]-p[1],q[2]-p[2]);p=q;}m.crownAlong=L;
+  const bc=billCenter();m.billL=bc.len;m.billPts=bc.pts;const tip=bc.pts[bc.pts.length-1];m.billReach=tip[2]-bc.cz;m.billFrontZ=bc.cz;
+  let fx=0,wx=0,wy=0,minY=0,maxZ=-1e9,maxXc=0,minZc=1e9;
+  for(let i=0;i<=N;i++){const th=-THB+2*THB*i/N;fx=Math.max(fx,Math.abs(brimFlat(th,1)[0]));
+    for(const off of[BT,-BT]){const q=brimSurf(th,1,off);if(Math.abs(q[0])>wx){wx=Math.abs(q[0]);wy=q[1];}minY=Math.min(minY,q[1]);maxZ=Math.max(maxZ,q[2]);}}
+  for(let j=0;j<=200;j++)for(let i=0;i<=360;i++){const q=crownPoint(-Math.PI+TAU*i/360,j/200);maxXc=Math.max(maxXc,Math.abs(q[0]));minZc=Math.min(minZc,q[2]);}
+  m.billWFlat=2*fx;m.billWWorn=2*wx;m.billTipY=wy;m.minY=minY;m.tipZ=maxZ;m.crownHalf=maxXc;m.backZ=minZc;
+  m.overallL=maxZ-minZc;m.overallW=2*Math.max(wx,maxXc);
+  return m;
+}
+// a set bill width or bill length: solve the bill so the measured value matches exactly
+(function(){
+  const solve=(set,get,target,lo,hi)=>{for(let i=0;i<60;i++){const mid=(lo+hi)/2;set(mid);if(get()<target)lo=mid;else hi=mid;}set((lo+hi)/2);};
+  if(BUCKET){
+    if(dimSet('billL'))solve(v=>{BUCKET_W=v;},()=>billCenter().len,DIM_T.billL,0.5,20);
+  }else{
+    if(dimSet('billW')){BRIM_RX=DIM_T.billW/2;setBrimO();}
+    if(dimSet('billL')){const z0=B*0.985;solve(v=>{BRIM_TIP=v;setBrimO();},()=>billCenter().len,DIM_T.billL,z0+0.5,z0+20);}
+  }
+})();
+let MEAS=measureHat();
 const brimCanvas=document.createElement('canvas');brimCanvas.width=2048;brimCanvas.height=512;
 const brimTex=new THREE.CanvasTexture(brimCanvas);brimTex.encoding=THREE.sRGBEncoding;brimTex.anisotropy=maxAniso;
 const brimTopMat=new THREE.MeshStandardMaterial({map:brimTex,roughness:0.82,side:THREE.DoubleSide});
@@ -2581,6 +2655,96 @@ function renderCalloutSheets(S){
   }
   return out;
 }
+/* ---------- dimension sheet: to-scale front and side views with every measurement ---------- */
+function dimRows(){
+  const m=MEAS,rows=[
+    ['Head size','Around the base of the crown, where the sweatband is sewn (fits fitted size '+fittedSize(m.head)+')',m.head],
+    [VISOR?'Crown (band) height':'Crown height',VISOR?'Straight up at the center front, bill seam to the top edge of the band':'Straight up at the center front, bill seam to the top of the crown, button not included',m.crown],
+    [VISOR?'Band height, along the fabric':'Front height, along the fabric','Center front, measured along the crown surface from the bill seam to the top',m.crownAlong],
+    [BUCKET?'Brim width':'Bill length',BUCKET?'At the front, along the top of the brim from the crown seam to the edge':'At the center, along the top of the bill from the crown seam to the tip',m.billL],
+    [BUCKET?'Brim reach':'Bill reach',BUCKET?'At the front, straight out (level) from the crown to the brim edge':'Straight out (level) from the front of the crown to the bill tip',m.billReach]];
+  if(!BUCKET)rows.push(['Bill width, flat','Widest point of the bill laid flat, before it’s curved',m.billWFlat],['Bill width, as worn','Straight across between the widest points of the curved bill',m.billWWorn]);
+  rows.push(['Overall length','Level, from the back of the crown to the '+(BUCKET?'front edge of the brim':'bill tip'),m.overallL],['Overall width','Level, side to side at the widest point',m.overallW]);
+  return rows;
+}
+function renderDimensionSheet(){
+  const m=MEAS,styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat',visor:'Low crown visor',hvisor:'High crown visor'}[STYLE]||'5-panel';
+  const W=3000,Hs=2240,c=document.createElement('canvas');c.width=W;c.height=Hs;const g=c.getContext('2d');
+  const font=(w,px)=>`${w} ${px}px "Archivo", system-ui, sans-serif`,INK='#202428',DIM='#1E6B4A';
+  g.fillStyle='#F4F4F2';g.fillRect(0,0,W,Hs);
+  g.fillStyle=INK;g.font=font(800,46);g.fillText('Dimensions: '+styleName,60,82);
+  g.fillStyle='#5F656C';g.font=font(500,26);g.fillText((($('#designName')&&$('#designName').value.trim())||'Untitled design')+'  |  Front and side views drawn to the same scale',62,122);
+  // one scale for both views
+  const topY=m.crown+(VISOR||CAMP||BUCKET?0:0.6),botY=Math.min(m.minY,0)-0.2,cyW=(topY+botY)/2;
+  const spanX=2*Math.max(m.crownHalf,m.billWWorn/2)+8,spanZ=(m.tipZ-m.backZ)+6,spanY=(topY-botY)+9;
+  const span=Math.max(spanX,spanZ,spanY),R=1500,D=1260,y0=170;
+  const keepBg=scene.background,keepSize=renderer.getSize(new THREE.Vector2()),keepPr=renderer.getPixelRatio();
+  renderer.setPixelRatio(1);renderer.setSize(R,R,false);scene.background=lin('#F4F4F2');
+  const views=[{title:'Front',x:90,eye:[0,cyW,300],at:[0,cyW,0]},{title:'Side',x:90+D+120,eye:[-300,cyW,(m.tipZ+m.backZ)/2],at:[0,cyW,(m.tipZ+m.backZ)/2]}];
+  const px=span/D; // cm per sheet pixel
+  for(const v of views){
+    const cam2=new THREE.OrthographicCamera(-span/2,span/2,span/2,-span/2,1,1000);v.cam=cam2; // one camera per view, so each view's points project through its own camera
+    cam2.position.set(...v.eye);cam2.up.set(0,1,0);cam2.lookAt(...v.at);cam2.updateProjectionMatrix();cam2.updateMatrixWorld();
+    renderer.render(scene,cam2);g.drawImage(canvas,v.x,y0,D,D);
+    g.strokeStyle='#D2D4D7';g.lineWidth=2;g.strokeRect(v.x,y0,D,D);
+    g.fillStyle=INK;g.font=font(750,30);g.fillText(v.title+' view',v.x+20,y0+46);
+    v.P=(x,y,z)=>{const q=new THREE.Vector3(x,y,z).project(cam2);return[v.x+(q.x+1)/2*D,y0+(1-q.y)/2*D];};
+  }
+  scene.background=keepBg;renderer.setPixelRatio(keepPr);renderer.setSize(keepSize.x,keepSize.y,false);
+  // drawing helpers
+  const arrow=(x,y,ang)=>{g.beginPath();g.moveTo(x,y);g.lineTo(x-26*Math.cos(ang-0.28),y-26*Math.sin(ang-0.28));g.lineTo(x-26*Math.cos(ang+0.28),y-26*Math.sin(ang+0.28));g.closePath();g.fill();};
+  const label=(txt,sub,x,y,rot=0)=>{g.save();g.translate(x,y);g.rotate(rot);g.font=font(750,27);const w1=g.measureText(txt).width;g.font=font(500,23);const w2=g.measureText(sub).width,w=Math.max(w1,w2)+28;
+    g.fillStyle='rgba(255,255,255,0.94)';g.strokeStyle=DIM;g.lineWidth=2.5;roundRect(g,-w/2,-38,w,76,10);g.fill();g.stroke();
+    g.fillStyle=INK;g.textAlign='center';g.font=font(750,27);g.fillText(txt,0,-6);g.fillStyle='#4A4F55';g.font=font(500,23);g.fillText(sub,0,26);g.textAlign='left';g.restore();};
+  const dim=(a,b,txt,sub,ext)=>{ // a,b: sheet points; ext: [[from],[to]] extension lines
+    g.strokeStyle=DIM;g.fillStyle=DIM;g.lineWidth=3;
+    for(const [p,q] of ext||[]){g.setLineDash([10,7]);g.beginPath();g.moveTo(...p);g.lineTo(...q);g.stroke();g.setLineDash([]);}
+    g.beginPath();g.moveTo(...a);g.lineTo(...b);g.stroke();const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);arrow(b[0],b[1],ang);arrow(a[0],a[1],ang+Math.PI);
+    const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,vert=Math.abs(b[0]-a[0])<Math.abs(b[1]-a[1]);label(txt,sub,mx,my,vert?-Math.PI/2:0);};
+  const F=views[0],S=views[1],cmIn=c=>fracIn(c)+'  ·  '+c.toFixed(1)+' cm';
+  // front: crown height, beside the crown
+  {const xd=m.crownHalf+2.6,a=F.P(xd,0,0),b=F.P(xd,m.crown,0);
+   dim(a,b,VISOR?'Band height':'Crown height',cmIn(m.crown),[[F.P(m.crownHalf*0.6,0,0),F.P(xd+0.6,0,0)],[F.P(0,m.crown,0),F.P(xd+0.6,m.crown,0)]]);}
+  // front: bill width as worn, below the bill
+  if(!BUCKET){const yd=Math.min(m.minY,m.billTipY)-2.6,h=m.billWWorn/2,a=F.P(-h,yd,0),b=F.P(h,yd,0);
+    dim(a,b,'Bill width, as worn',cmIn(m.billWWorn),[[F.P(-h,m.billTipY,0),F.P(-h,yd-0.6,0)],[F.P(h,m.billTipY,0),F.P(h,yd-0.6,0)]]);}
+  else{const yd=m.minY-2.6,h=m.overallW/2;dim(F.P(-h,yd,0),F.P(h,yd,0),'Overall width',cmIn(m.overallW),[[F.P(-h,m.minY,0),F.P(-h,yd-0.6,0)],[F.P(h,m.minY,0),F.P(h,yd-0.6,0)]]);}
+  // side: bill length along the bill, drawn following the bill's own curve
+  {const pts=m.billPts,lift=1.6,P=q=>S.P(q[0],q[1]+lift,q[2]);g.strokeStyle=DIM;g.fillStyle=DIM;g.lineWidth=3;
+   const a=P(pts[0]),b=P(pts[pts.length-1]);
+   g.setLineDash([10,7]);for(const q of[pts[0],pts[pts.length-1]]){g.beginPath();g.moveTo(...S.P(q[0],q[1]+0.25,q[2]));g.lineTo(...S.P(q[0],q[1]+lift+0.6,q[2]));g.stroke();}g.setLineDash([]);
+   g.beginPath();pts.forEach((q,i)=>{if(i%20&&i!==pts.length-1)return;const t=P(q);i?g.lineTo(...t):g.moveTo(...t);});g.stroke();
+   const k=Math.min(pts.length-1,30),a2=P(pts[k]),b2=P(pts[pts.length-1-k]);
+   arrow(a[0],a[1],Math.atan2(a[1]-a2[1],a[0]-a2[0]));arrow(b[0],b[1],Math.atan2(b[1]-b2[1],b[0]-b2[0]));
+   const mid=P(pts[Math.floor(pts.length/2)]);label((BUCKET?'Brim width':'Bill length')+', along the '+(BUCKET?'brim':'bill'),cmIn(m.billL),mid[0],mid[1]-62);}
+  // side: overall length, below everything
+  {const yd=m.minY-2.6,a=S.P(0,yd,m.backZ),b=S.P(0,yd,m.tipZ);
+   dim(a,b,'Overall length',cmIn(m.overallL),[[S.P(0,0,m.backZ),S.P(0,yd-0.6,m.backZ)],[S.P(0,m.minY,m.tipZ),S.P(0,yd-0.6,m.tipZ)]]);}
+  // scale bar
+  {const len=IN_CM/px;g.fillStyle=INK;g.fillRect(S.x+D-60-len,y0+D-56,len,8);g.font=font(600,22);g.textAlign='right';g.fillText('1 in',S.x+D-60,y0+D-70);g.textAlign='left';}
+  // table
+  const rows=dimRows(),tx=90,ty=y0+D+70,colW=[430,1500,420,300],rh=58;
+  g.fillStyle='#E7E8E6';g.fillRect(tx,ty,colW.reduce((a,b)=>a+b),rh);g.fillStyle='#5F656C';g.font=font(650,22);
+  ['MEASUREMENT','HOW IT’S MEASURED','INCHES','CENTIMETERS'].forEach((h,i)=>g.fillText(h,tx+18+colW.slice(0,i).reduce((a,b)=>a+b,0),ty+37));
+  rows.forEach(([name,how,cm],r)=>{const y=ty+rh*(r+1);g.fillStyle=r%2?'#F4F4F2':'#FFFFFF';g.fillRect(tx,y,colW.reduce((a,b)=>a+b),rh);
+    let x=tx+18;g.fillStyle=INK;g.font=font(700,25);g.fillText(name,x,y+38,colW[0]-30);x+=colW[0];
+    g.fillStyle='#4A4F55';g.font=font(500,22);g.fillText(how,x,y+37,colW[1]-30);x+=colW[1];
+    g.fillStyle=INK;g.font=font(650,25);g.fillText(fracIn(cm)+'  ('+(cm/IN_CM).toFixed(2)+')',x,y+38,colW[2]-30);x+=colW[2];g.fillText(cm.toFixed(1)+' cm',x,y+38,colW[3]-30);});
+  g.strokeStyle='#D2D4D7';g.lineWidth=2;g.strokeRect(tx,ty,colW.reduce((a,b)=>a+b),rh*(rows.length+1));
+  g.fillStyle='#7A8087';g.font=font(500,21);
+  g.fillText('Measured directly on the 3D model of the finished cap. Inches are rounded to the nearest 1/16 in, centimeters to the nearest millimeter. Fabric thickness, seam allowances and',90,Hs-58);
+  g.fillText('sewing tolerances (usually about ±1/8 in, 3 mm) aren’t included. Ask your supplier to confirm these sizes on a sewn sample before production.',90,Hs-28);
+  return{name:'cap-12-dimensions.png',data:dataURLBytes(c.toDataURL('image/png'))};
+}
+function dimensionFiles(){
+  const rows=dimRows(),enc=new TextEncoder(),styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',flat:'Flat brim snapback',dad:'Dad hat',bucket:'Bucket hat',visor:'Low crown visor',hvisor:'High crown visor'}[STYLE]||'5-panel';
+  let txt=`CAP STUDIO DIMENSIONS\nDesign: ${($('#designName')&&$('#designName').value.trim())||'Untitled design'}\nStyle: ${styleName}\n\n`;
+  for(const [n,how,cm] of rows)txt+=`  ${n.padEnd(30)} ${(fracIn(cm)+' ('+(cm/IN_CM).toFixed(2)+' in)').padEnd(24)} ${(cm.toFixed(1)+' cm').padEnd(10)} ${how}\n`;
+  txt+=`\nNOTES\n  Measured directly on the 3D model. Fabric thickness, seam allowances and sewing tolerances (usually about\n  ±1/8 in, 3 mm) aren't included. Confirm on a sewn sample before production.\n`;
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';let csv='Measurement,Inches (fraction),Inches,Centimeters,How it is measured\n';
+  for(const [n,how,cm] of rows)csv+=[n,fracIn(cm),(cm/IN_CM).toFixed(3),cm.toFixed(2),how].map(q).join(',')+'\n';
+  return[{name:'cap-dimensions.txt',data:enc.encode(txt)},{name:'cap-dimensions.csv',data:enc.encode(csv)}];
+}
 saveBtn.addEventListener('click',async()=>{
   saveBtn.disabled=true;const label=saveBtn.textContent;saveBtn.textContent='Rendering…';
   await new Promise(r=>setTimeout(r,30));
@@ -2598,6 +2762,7 @@ saveBtn.addEventListener('click',async()=>{
       files.push({name:'cap-'+name+'.png',data:dataURLBytes(canvas.toDataURL('image/png'))});
     }
     try{files.push(...renderCalloutSheets(S));}catch(e){console.warn('callout sheets skipped',e);}
+    try{files.push(renderDimensionSheet());}catch(e){console.warn('dimension sheet skipped',e);}
   }finally{
     scene.background=null;renderer.setPixelRatio(pr);renderer.setSize(size.x,size.y,false);camera.aspect=size.x/Math.max(1,size.y);camera.updateProjectionMatrix();
     cam.yaw=keep.yaw;cam.pitch=keep.pitch;cam.dist=keep.dist;cam.target.copy(keep.target);dirty=true;
@@ -2606,6 +2771,7 @@ saveBtn.addEventListener('click',async()=>{
   }
   if(!files.length){toast('The images couldn’t be created. Try again.');return;}
   try{files.push(...colorSpecFiles());}catch(e){console.warn('color spec skipped',e);}
+  try{files.push(...dimensionFiles());}catch(e){console.warn('dimension spec skipped',e);}
   saveBlob(makeZip(files),'cap-mockup-views.zip');
 });
 async function saveBlob(blob,filename){
@@ -2634,11 +2800,12 @@ function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(
 function serializeDesign(){
   const zones={};
   for(const k of ZONE_KEYS){const z=ZONES[k],o={};ZONE_FIELDS.forEach(f=>{if(z[f]!==undefined)o[f]=z[f];});o.image=imageToDataURL(z.image);zones[k]=o;}
-  return{style:STYLE,colors:{...colors},perforated,ropeOn,zones,tapeText:{...tapeText}};
+  return{style:STYLE,colors:{...colors},perforated,ropeOn,zones,tapeText:{...tapeText},dims:dimsNow()};
 }
 async function restoreDesign(d){
   if(!d||!d.zones)throw new Error('bad');
   if(d.style&&d.style!==STYLE){await switchStyle(d.style,d);return;} // a design made in the other style
+  if(d.dims&&dimsDiffer(d.dims)){await rebuildHat(d.dims,d);return;} // a design made at other sizes
   if(d.zones.side&&!d.zones.left){const o=d.zones.side,w=o.which||'left',empty={...o,source:null,image:null,text:''};
     d.zones.left=(w==='left'||w==='both')?o:empty;d.zones.right=(w==='right'||w==='both')?o:empty;}
   Object.assign(colors,PANEL_RESET,d.colors||{});
@@ -2773,6 +2940,11 @@ async function switchStyle(next,design){
   else if(next==='visor'){d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#8E9399'});}
   else if(next==='bucket'||next==='flat'){d.colors=Object.assign({},d.colors,{tape:'#1F2225',sweat:'#1F2225'});}
   else if(d.colors&&d.colors.tape==='#1F2225'&&d.colors.sweat==='#1F2225'){d.colors.tape=null;d.colors.sweat=null;}
+  try{ // sizes belong to the style they were set on; head size carries over to any style
+    if(design&&design.dims&&design.style===next)sessionStorage.setItem('capDims',JSON.stringify(Object.assign({},design.dims,{style:next})));
+    else sessionStorage.setItem('capDims',JSON.stringify({style:next,head:MEAS.head}));
+    if(!dimSet('head')&&!(design&&design.dims&&design.style===next))sessionStorage.removeItem('capDims');
+  }catch(e){}
   try{sessionStorage.setItem('capStyle',next);sessionStorage.setItem('capResume','1');}catch(e){toast('Switching cap styles isn’t available in this view.');return;}
   try{await IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d});}catch(e){}
   toast('Switching to '+({camp:'camp cap',trucker:'trucker',sixpanel:'6-panel',flat:'flat brim snapback',dad:'dad hat',bucket:'bucket hat',visor:'low crown visor',hvisor:'high crown visor'}[next]||'5-panel')+'…');
@@ -2785,6 +2957,59 @@ if(!TRUCK)$('#meshColorLabel').hidden=true;
 if(TRUCK||VISOR){const pl=$('#perfToggle');if(pl&&pl.closest('label'))pl.closest('label').hidden=true;}
 $('#styleNote').textContent=HV?'High crown visor: a tall, seamless band that leans back over the forehead and tapers toward the back, a bound top edge, a curved bill with a contrast underside, and an adjustable strap with metal slides.':VISOR?'Low crown visor: an open-top band, tallest over the forehead and tapering toward the back, with temple seams, a pre-curved stitched bill, a mesh sweatband and a hook-and-loop strap.':FLAT?'Flat brim snapback: a high, structured six-panel crown with a center front seam, an eyelet on every panel, a flat stitched bill and a snap closure.':BUCKET?'Bucket hat: a tapered crown with a flat top panel, a laser-perforated band, and a brim that slopes down all the way around. No closure or top button.':DAD?'Unstructured dad hat: six soft panels with no buckram, so the crown relaxes and sits low, with an eyelet on each panel, a gently curved bill and a snap closure.':SIX?'High-profile 6-panel: a tall, upright front panel under an arched seam, a top panel, teardrop laser-perforated sides and back, a flat bill and a snap closure.':TRUCK?'Classic six-panel trucker: structured front panels split by a center seam, breathable mesh sides and back, a curved bill and a snap closure.':CAMP?'Soft, low camp cap: one front panel under an arched seam, side panels with eyelets, a flat bill and a webbing strap with a buckle.'
   :'Structured A-frame 5-panel with a curved bill and a snap closure. Switching keeps your artwork, colors and settings.';
+/* ---------- dimension controls ---------- */
+function dimsNow(){const m=MEAS,o={head:+m.head.toFixed(4),crown:+m.crown.toFixed(4),billL:+m.billL.toFixed(4)};if(!BUCKET)o.billW=+m.billWFlat.toFixed(4);return o;}
+function dimsDiffer(d){const n=dimsNow();return Object.keys(n).some(k=>typeof d[k]==='number'&&Math.abs(d[k]-n[k])>0.005);}
+async function rebuildHat(dims,design){
+  const d=design?JSON.parse(JSON.stringify(design)):serializeDesign();d.style=STYLE;d.dims=Object.assign({},dims);
+  const sig=JSON.stringify(dims);
+  try{if(RESUMING&&sessionStorage.getItem('capDimsLast')===sig)return;sessionStorage.setItem('capDimsLast',sig);}catch(e){} // never rebuild in a loop
+  try{sessionStorage.setItem('capDims',JSON.stringify(Object.assign({},dims,{style:STYLE})));sessionStorage.setItem('capStyle',STYLE);sessionStorage.setItem('capResume','1');}
+  catch(e){toast('Changing sizes isn’t available in this view.');return;}
+  try{await IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d});}catch(e){}
+  toast('Rebuilding the hat at the new sizes…');setTimeout(()=>location.reload(),60);
+}
+// inches to the nearest 1/16, as a fraction
+function fracIn(cm){const t=Math.round(cm/IN_CM*16),w=Math.floor(t/16);let n=t%16,dd=16;while(n&&n%2===0){n/=2;dd/=2;}return(n?(w?w+' ':'')+n+'/'+dd:String(w))+' in';}
+function fmtDim(cm){return fracIn(cm)+' ('+(cm/IN_CM).toFixed(2)+') · '+cm.toFixed(1)+' cm';}
+function fittedSize(cm){const t=Math.round(cm/IN_CM/Math.PI*8),w=Math.floor(t/8);let n=t%8,dd=8;while(n&&n%2===0){n/=2;dd/=2;}return n?w+' '+n+'/'+dd:String(w);}
+const DIM_UI=[
+  {k:'head',name:'Head size',hint:'Around the base of the crown, where the sweatband is sewn.',lim:[50,64]},
+  {k:'crown',name:VISOR?'Crown (band) height':'Crown height',hint:VISOR?'Straight up at the center front, from the bill seam to the top edge of the band.':'Straight up at the center front, from the bill seam to the top of the crown (button not included).',lim:VISOR?[3,10]:[6,14]},
+  {k:'billL',name:BUCKET?'Brim width':'Bill length',hint:BUCKET?'At the front, along the top of the brim from the crown seam to the edge.':'At the center, along the top of the bill from the crown seam to the tip.',lim:BUCKET?[2.5,10]:[4,10]}
+].concat(BUCKET?[]:[{k:'billW',name:'Bill width',hint:'Widest point of the bill laid flat, before it’s curved.',lim:[14,26]}]);
+const dimVal=k=>k==='billW'?MEAS.billWFlat:MEAS[k];
+(function buildDimUI(){
+  const box=$('#dimRows');if(!box)return;
+  for(const f of DIM_UI){const cm=dimVal(f.k),row=document.createElement('div');row.className='dimrow';
+    row.innerHTML=`<span class="dname">${f.name}</span><label><input type="number" inputmode="decimal" step="0.0625" data-dim="${f.k}" data-unit="in" aria-label="${f.name} in inches"> in</label><label><input type="number" inputmode="decimal" step="0.1" data-dim="${f.k}" data-unit="cm" aria-label="${f.name} in centimeters"> cm</label><span class="dhint">${f.hint}</span><span class="dmeta" data-meta="${f.k}"></span>`;
+    box.appendChild(row);}
+  const meta=()=>{const m=$('[data-meta="head"]');if(m)m.textContent='Fits fitted size '+fittedSize(+$('[data-dim="head"][data-unit="cm"]').value*1||MEAS.head);
+    const w=$('[data-meta="billW"]');if(w)w.textContent=`Curved, as worn: ${fmtDim(MEAS.billWWorn)} straight across`;};
+  const fill=()=>{for(const f of DIM_UI){const cm=dimVal(f.k);$(`[data-dim="${f.k}"][data-unit="cm"]`).value=cm.toFixed(1);$(`[data-dim="${f.k}"][data-unit="in"]`).value=(cm/IN_CM).toFixed(3).replace(/0+$/,'').replace(/\.$/,'');}meta();};
+  fill();
+  const clampNote=(DIM_T.billW&&!BUCKET&&Math.abs(MEAS.billWFlat-DIM_T.billW)>0.05)?`At this head size the bill can’t be narrower than ${fmtDim(MEAS.billWFlat)}, so it was built at that width.`:'';
+  if(clampNote)$('#dimNote').textContent=clampNote;
+  const pending=()=>{let any=false,bad=false;for(const f of DIM_UI){const el=$(`[data-dim="${f.k}"][data-unit="cm"]`),v=parseFloat(el.value);
+      const ok=isFinite(v)&&v>=f.lim[0]&&v<=f.lim[1];for(const u of['in','cm'])$(`[data-dim="${f.k}"][data-unit="${u}"]`).setAttribute('aria-invalid',String(!ok));
+      if(!ok)bad=true;else if(Math.abs(v-dimVal(f.k))>0.005)any=true;}
+    $('#dimApply').disabled=bad||!any;
+    $('#dimNote').textContent=bad?'Some sizes are outside the range this style can be built at: head 50–64 cm, crown '+DIM_UI[1].lim.join('–')+' cm, '+(BUCKET?'brim ':'bill length ')+DIM_UI[2].lim.join('–')+' cm'+(BUCKET?'':', bill width 14–26 cm')+'.'
+      :any?'Press Apply sizes to rebuild the hat. Your design, colors and artwork stay as they are.':(clampNote||'Every size is measured on the 3D model. Save PNGs adds a dimension sheet with all of them for your supplier.');
+    meta();};
+  box.addEventListener('input',e=>{const el=e.target;if(!el.dataset||!el.dataset.dim)return;const v=parseFloat(el.value),k=el.dataset.dim;
+    if(isFinite(v)){if(el.dataset.unit==='in')$(`[data-dim="${k}"][data-unit="cm"]`).value=(v*IN_CM).toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+      else $(`[data-dim="${k}"][data-unit="in"]`).value=(v/IN_CM).toFixed(3).replace(/0+$/,'').replace(/\.$/,'');}
+    pending();});
+  box.addEventListener('keydown',e=>{if(e.key==='Enter'&&!$('#dimApply').disabled){e.preventDefault();$('#dimApply').click();}});
+  $('#dimApply').addEventListener('click',()=>{const t={};for(const f of DIM_UI)t[f.k]=parseFloat($(`[data-dim="${f.k}"][data-unit="cm"]`).value);rebuildHat(t);});
+  $('#dimReset').addEventListener('click',()=>{
+    if(!Object.keys(DIM_T).length){toast('This hat is already at the standard size');return;}
+    const d=serializeDesign();delete d.dims;
+    try{sessionStorage.removeItem('capDims');sessionStorage.setItem('capStyle',STYLE);sessionStorage.setItem('capResume','1');}catch(e){toast('Changing sizes isn’t available in this view.');return;}
+    IDB.put({id:'__session__',name:'__session__',updated:Date.now(),design:d}).catch(()=>{}).then(()=>{toast('Rebuilding at the standard size…');setTimeout(()=>location.reload(),60);});});
+})();
+
 async function resumeSession(){ // after a style switch, bring the design back
   try{const items=await IDB.all();const ses=items.find(i=>i.id==='__session__');if(!ses)return;
     await IDB.del('__session__');if(Date.now()-ses.updated>10*60*1000)return;

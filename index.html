@@ -6,11 +6,12 @@
 <title>Cap studio: 3D hat mockups</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Playfair+Display:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Playfair+Display:wght@700&family=Yellowtail&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --backdrop:#E3E4E6; --backdrop-hi:#F3F3F4; --panel:#F7F7F5; --ink:#202428; --muted:#5F656C;
   --rule:#D4D6D9; --field:#FFFFFF; --accent:#1E6B4A; --accent-ink:#FFFFFF; --chip:#ECEDEB;
+  --sc-pass:#237A3B; --sc-pass-bg:#E2F1E6; --sc-warn:#975C0B; --sc-warn-bg:#FAEED8; --sc-fail:#B02C24; --sc-fail-bg:#F7E1DE; --sc-stage:#D9DBDE; --sc-ruler:#7D838B; --sc-accent-soft:#DDEBE4;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   color-scheme:light;
 }
@@ -18,11 +19,13 @@
   :root:not([data-theme="light"]){
     --backdrop:#2B2E32; --backdrop-hi:#3A3E43; --panel:#1D1F22; --ink:#ECEDEE; --muted:#A3A8AE;
     --rule:#373B40; --field:#25282C; --accent:#57B98F; --accent-ink:#0E1A14; --chip:#2A2D31; color-scheme:dark;
+    --sc-pass:#5CC48E; --sc-pass-bg:#14271D; --sc-warn:#E5A94B; --sc-warn-bg:#2B2113; --sc-fail:#F27C6F; --sc-fail-bg:#311917; --sc-stage:#121416; --sc-ruler:#6E747C; --sc-accent-soft:#1B3328;
   }
 }
 :root[data-theme="dark"]{
   --backdrop:#2B2E32; --backdrop-hi:#3A3E43; --panel:#1D1F22; --ink:#ECEDEE; --muted:#A3A8AE;
   --rule:#373B40; --field:#25282C; --accent:#57B98F; --accent-ink:#0E1A14; --chip:#2A2D31; color-scheme:dark;
+    --sc-pass:#5CC48E; --sc-pass-bg:#14271D; --sc-warn:#E5A94B; --sc-warn-bg:#2B2113; --sc-fail:#F27C6F; --sc-fail-bg:#311917; --sc-stage:#121416; --sc-ruler:#6E747C; --sc-accent-soft:#1B3328;
 }
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -154,6 +157,173 @@ body.viewer .stage{height:100%}
 }
 @media (prefers-reduced-motion: reduce){ .toast{transition:none} }
 </style>
+<style>
+/* ---------- Stitch check: the embroidery checker, a full-screen mode of the studio ---------- */
+body.viewer #stitchBtn{display:none}
+.sc-view{position:fixed;inset:0;z-index:45;overflow:auto;background:var(--panel);color:var(--ink);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#sc-view{--sc-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+#sc-view .sc-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;
+  padding-block:12px;padding-left:max(16px,2vw);padding-right:max(16px,2vw);background:var(--panel);border-bottom:1px solid var(--rule)}
+@media (max-width:640px){#sc-view .sc-bar{position:static}}
+#sc-view .sc-bar h1{margin:0;font-size:26px;line-height:1;font-weight:850;font-stretch:72%;letter-spacing:-.01em}
+#sc-view .sc-src{display:flex;align-items:center;gap:8px;min-width:0}
+#sc-view .sc-src label{font:500 11px/1.2 var(--sc-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+#sc-view .sc-src select{width:auto;max-width:min(300px,58vw)}
+#sc-view .sc-spacer{flex:1}
+#sc-view .sc-shell{max-width:1260px;margin:0 auto;padding-block:16px 56px;padding-left:max(16px,2vw);padding-right:max(16px,2vw)}
+#sc-view .sc-intro{margin:0 0 14px;color:var(--muted);font-size:14px;max-width:72ch}
+#sc-view .mono{font-family:var(--sc-mono);font-variant-numeric:tabular-nums}
+#sc-view h2,#sc-view h3,#sc-view h4{text-wrap:balance}
+#sc-view a{color:var(--accent)}
+#sc-view .btn.small{font-size:13px;padding:7px 11px}
+#sc-view select,#sc-view input[type=number]{font:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--rule);border-radius:9px;padding:8px 9px;min-height:38px;width:100%;min-width:0}
+#sc-view input[type=number]{font-family:var(--sc-mono);font-variant-numeric:tabular-nums}
+
+/* settings */
+#sc-view .sc-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px 18px;background:var(--field);border:1px solid var(--rule);border-radius:12px;padding:14px 16px}
+#sc-view .sc-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+#sc-view .sc-field.wide{grid-column:span 2}
+@media (max-width:560px){#sc-view .sc-field.wide{grid-column:auto}}
+#sc-view .sc-lbl,#sc-view .sc-field>label{font:500 11px/1.2 var(--sc-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#sc-view .sc-size{display:flex;align-items:center;gap:6px}
+#sc-view .sc-size span{color:var(--muted)}
+#sc-view .seg.wrap{width:100%}
+#sc-view .seg.wrap button{min-height:36px}
+#sc-view .sc-swatches{display:flex;flex-wrap:wrap;gap:6px}
+#sc-view .sw{width:30px;height:30px;border-radius:50%;border:1px solid var(--rule);cursor:pointer;padding:0}
+#sc-view .sw[aria-checked="true"]{outline:2px solid var(--accent);outline-offset:2px}
+#sc-view .sw.hat{width:auto;border-radius:15px;padding:0 11px 0 4px;display:inline-flex;align-items:center;gap:7px;background:var(--chip);color:var(--ink);font:inherit;font-size:12.5px;font-weight:650}
+#sc-view .sw.hat i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.22);display:block}
+#sc-view .sc-checkrow{display:flex;align-items:center;gap:8px;min-height:38px;font-size:14px}
+#sc-view .sc-checkrow input{width:18px;height:18px;accent-color:var(--accent)}
+#sc-view .sc-field>label.sc-checkrow{font:inherit;font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink)}
+#sc-view .sc-inline{display:flex;align-items:center;gap:8px}
+#sc-view .sc-inline input{flex:1}
+#sc-view .sc-hint{font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* stage and sheet */
+#sc-view .sc-workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:18px;margin-top:18px;align-items:start}
+@media (max-width:920px){#sc-view .sc-workspace{grid-template-columns:1fr}}
+#sc-view .sc-card{background:var(--field);border:1px solid var(--rule);border-radius:12px;min-width:0}
+#sc-view .sc-stagecard{padding:12px 14px 14px}
+#sc-view .sc-stagehead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-bottom:12px}
+#sc-view .sc-tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--chip);border:1px solid var(--rule);border-radius:9px;padding:3px}
+#sc-view .sc-tabs button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;padding:7px 11px;border-radius:7px;cursor:pointer}
+#sc-view .sc-tabs button[aria-selected="true"]{background:var(--field);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+#sc-view .sc-dims{font-size:12px;color:var(--muted)}
+#sc-view .sc-stage{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:22px auto}
+#sc-view .sc-corner{font:500 10px/22px var(--sc-mono);color:var(--muted);text-align:center}
+#sc-view .rtop{position:relative;border-bottom:1px solid var(--sc-ruler);overflow:hidden}
+#sc-view .rleft{position:relative;border-right:1px solid var(--sc-ruler);overflow:hidden}
+#sc-view .rtop .t{position:absolute;bottom:0;width:1px;background:var(--sc-ruler)}
+#sc-view .rleft .t{position:absolute;right:0;height:1px;background:var(--sc-ruler)}
+#sc-view .rtop .t.l{height:12px}#sc-view .rtop .t.m{height:8px}#sc-view .rtop .t.s{height:5px}#sc-view .rtop .t.xs{height:3px}
+#sc-view .rleft .t.l{width:12px}#sc-view .rleft .t.m{width:8px}#sc-view .rleft .t.s{width:5px}#sc-view .rleft .t.xs{width:3px}
+#sc-view .rtop b{position:absolute;top:2px;transform:translateX(-50%);font:500 10px/1 var(--sc-mono);color:var(--muted)}
+#sc-view .rtop b.first{transform:translateX(3px)}
+#sc-view .rtop b.last{transform:translateX(calc(-100% - 3px))}
+#sc-view .rleft b{position:absolute;left:3px;transform:translateY(-50%);font:500 10px/1 var(--sc-mono);color:var(--muted)}
+#sc-view .rleft b.first{transform:translateY(2px)}
+#sc-view .rtop .ext{position:absolute;bottom:0;height:3px;background:var(--accent);opacity:.85}
+#sc-view .rleft .ext{position:absolute;right:0;width:3px;background:var(--accent);opacity:.85}
+#sc-view .sc-cwrap{position:relative;background:var(--sc-stage);min-height:120px}
+#sc-canvas{display:block;width:100%;height:auto;max-width:100%}
+#sc-canvas.pickable{cursor:pointer}
+#sc-view .sc-tag{position:absolute;top:8px;left:8px;font:600 11px/1 var(--sc-mono);letter-spacing:.06em;text-transform:uppercase;background:var(--field);color:var(--ink);border:1px solid var(--rule);padding:5px 7px;border-radius:4px}
+#sc-view .sc-busy{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--field) 62%,transparent);font:500 13px var(--sc-mono);color:var(--ink)}
+#sc-view .sc-busy span{background:var(--field);border:1px solid var(--rule);padding:8px 12px;border-radius:6px}
+#sc-view .sc-dropmsg{position:absolute;inset:0;display:grid;place-items:center;border:2px dashed var(--accent);background:color-mix(in srgb,var(--sc-accent-soft) 85%,transparent);font-weight:700;font-size:15px;color:var(--ink)}
+#sc-view .sc-err{position:absolute;inset:0;display:grid;place-items:center;padding:16px;text-align:center;color:var(--sc-fail);font-weight:600;background:var(--field)}
+#sc-view .sc-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px;font-size:13px;color:var(--muted)}
+#sc-view .sc-legend .k{display:inline-flex;align-items:center;gap:6px}
+#sc-view .sc-legend .k i{width:12px;height:12px;border-radius:3px;display:inline-block}
+#sc-view .sc-stagefoot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+#sc-view .note{font-size:13px;color:var(--muted);margin:0;max-width:70ch}
+#sc-view .note.accent{color:var(--accent);margin-top:8px}
+#sc-view .sc-saves{display:flex;gap:6px;flex-wrap:wrap}
+#sc-view .sc-puton{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+#sc-view .sc-puton select{width:auto}
+#sc-view .sc-puton .note{flex-basis:100%}
+
+#sc-view .verdict{padding:16px 16px 14px}
+#sc-view .vtop{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+#sc-view .vlabel{font-weight:800;font-stretch:90%;font-size:22px;line-height:1.1}
+#sc-view .vscore{font-size:13px;color:var(--muted);white-space:nowrap}
+#sc-view .vscore strong{font-size:20px;color:var(--ink);font-weight:600}
+#sc-view .meter{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:12px 0 6px}
+#sc-view .meter span{height:7px;border-radius:2px;background:var(--rule)}
+#sc-view .meter.fail span.on{background:var(--sc-fail)}#sc-view .meter.warn span.on{background:var(--sc-warn)}#sc-view .meter.pass span.on{background:var(--sc-pass)}
+#sc-view .meterlab{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font:500 10px/1.2 var(--sc-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+#sc-view .vline{margin:10px 0 0;font-size:14px;color:var(--muted)}
+#sc-view .checks{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+#sc-view .checks li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 10px;padding:10px 16px;border-bottom:1px solid var(--rule);align-items:start}
+#sc-view .checks li.clickable{cursor:pointer}
+#sc-view .checks li.clickable:hover{background:var(--chip)}
+#sc-view .st{width:20px;height:20px;display:grid;place-items:center;font:700 12px/1 var(--sc-mono);margin-top:1px}
+#sc-view .st.pass{background:var(--sc-pass-bg);color:var(--sc-pass);border-radius:50%}
+#sc-view .st.warn{background:var(--sc-warn-bg);color:var(--sc-warn);border-radius:5px}
+#sc-view .st.fail{background:var(--sc-fail-bg);color:var(--sc-fail);border-radius:2px}
+#sc-view .st.info{background:var(--chip);color:var(--muted);border-radius:50%}
+#sc-view .ckname{font-weight:650;font-size:14px}
+#sc-view .ckdetail{font-size:13px;color:var(--muted)}
+#sc-view .ckval{font-size:12px;color:var(--ink);text-align:right;white-space:nowrap;padding-top:2px}
+#sc-view .block{padding:14px 16px;border-bottom:1px solid var(--rule)}
+#sc-view .block:last-child{border-bottom:0}
+#sc-view .block h3{font:500 11px/1.2 var(--sc-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+#sc-view .trow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0}
+#sc-view .trow.mix{grid-template-columns:26px minmax(0,1fr) auto auto}
+#sc-view .chip{width:26px;height:26px;border-radius:50%;border:1px solid rgba(0,0,0,.18);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18)}
+#sc-view .trow select{min-height:34px;padding:6px 8px;font-size:13px}
+#sc-view .tpct{font-size:12px;color:var(--muted);text-align:right;min-width:3.5em}
+#sc-view .tflag{grid-column:2 / -1;font-size:12px;color:var(--sc-warn);margin-top:-2px}
+#sc-view .tflag.fit{color:var(--accent)}
+#sc-view .tseg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+#sc-view .tseg button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 11px/1 var(--sc-mono);text-transform:uppercase;letter-spacing:.04em;padding:9px 7px;cursor:pointer}
+#sc-view .tseg button+button{border-left:1px solid var(--rule)}
+#sc-view .tseg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+#sc-view .stats{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13px}
+#sc-view .stats dt{color:var(--muted)}
+#sc-view .stats dd{margin:0;text-align:right;font-family:var(--sc-mono);font-variant-numeric:tabular-nums}
+#sc-view .mix{display:flex;height:8px;border-radius:3px;overflow:hidden;margin-top:4px;background:var(--rule)}
+#sc-view .mix span{display:block;height:100%}
+
+/* change list, review, rules */
+#sc-view section.sc-sec{margin-top:30px}
+#sc-view .sechead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 18px;margin-bottom:12px}
+#sc-view .sechead h2{font-weight:850;font-stretch:78%;font-size:clamp(22px,2.6vw,28px);margin:0;letter-spacing:-.005em}
+#sc-view .sechead p{margin:0;color:var(--muted);font-size:14px;max-width:64ch}
+#sc-view .reclist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;counter-reset:rec}
+@media (max-width:400px){#sc-view .reclist{grid-template-columns:1fr}}
+#sc-view .rec{background:var(--field);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;counter-increment:rec;display:flex;flex-direction:column;gap:6px;min-width:0}
+#sc-view .rechead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#sc-view .rechead::before{content:counter(rec,decimal-leading-zero);font:600 12px var(--sc-mono);color:var(--muted)}
+#sc-view .pill{font:600 11px/1 var(--sc-mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:4px}
+#sc-view .pill.fail{background:var(--sc-fail-bg);color:var(--sc-fail)}#sc-view .pill.warn{background:var(--sc-warn-bg);color:var(--sc-warn)}#sc-view .pill.info{background:var(--chip);color:var(--muted);border:1px solid var(--rule)}#sc-view .pill.pass{background:var(--sc-pass-bg);color:var(--sc-pass)}
+#sc-view .rec h3{margin:0;font-size:16px;font-weight:700;line-height:1.3}
+#sc-view .rec p{margin:0;font-size:14px;color:var(--muted)}
+#sc-view .rec .auto{font:500 12px var(--sc-mono);color:var(--accent);margin-top:2px}
+#sc-view .review{background:var(--field);border:1px solid var(--rule);border-radius:12px;padding:16px}
+#sc-view .reviewbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#sc-view .rv{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+#sc-view .rv-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#sc-view .rv-sum{margin:0;font-size:15px;max-width:75ch}
+#sc-view .rv h4{margin:0 0 6px;font:500 11px/1.2 var(--sc-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#sc-view .rv-keep{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+#sc-view .rv-keep li{background:var(--chip);border:1px solid var(--rule);border-radius:14px;padding:4px 10px;font-size:13px}
+#sc-view .rv-changes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+#sc-view .rv-changes li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;background:var(--chip);border-radius:8px}
+#sc-view .rv-changes b{font-weight:700}
+#sc-view .rv-changes .fix{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+#sc-view .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--field)}
+#sc-view table{border-collapse:collapse;width:100%;font-size:14px;min-width:620px}
+#sc-view th,#sc-view td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+#sc-view th{font:500 11px/1.2 var(--sc-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--chip)}
+#sc-view tr:last-child td{border-bottom:0}
+#sc-view td.v{font-family:var(--sc-mono);font-size:13px;font-variant-numeric:tabular-nums}
+#sc-view .foot{margin-top:22px;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#sc-view *{transition:none!important;animation:none!important}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -164,6 +334,7 @@ body.viewer .stage{height:100%}
       <button class="btn quiet" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ <span class="lbl">Undo</span></button>
       <button class="btn quiet" id="redoBtn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ <span class="lbl">Redo</span></button>
       <button class="btn quiet" id="spinBtn" aria-pressed="false" title="Spin the hat">↻ <span class="lbl">Spin</span></button>
+      <button class="btn" id="stitchBtn" title="Check whether the art on the hat can be embroidered, and simplify it">Stitch<span class="lbl"> check</span></button>
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
       <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
@@ -237,6 +408,127 @@ body.viewer .stage{height:100%}
       </section>
     </div>
   </aside>
+</div>
+
+<div class="sc-view" id="sc-view" role="dialog" aria-modal="true" aria-labelledby="sc-title" hidden>
+  <header class="sc-bar">
+    <button class="btn quiet" type="button" id="sc-back">← Back to the hat</button>
+    <h1 id="sc-title">Stitch check</h1>
+    <div class="sc-src"><label for="sc-source">Artwork</label><select id="sc-source"></select></div>
+    <span class="sc-spacer"></span>
+    <button class="btn" type="button" id="sc-uploadBtn">Upload artwork</button>
+    <button class="btn quiet" type="button" id="sc-sampleBtn">Use sample</button>
+    <input type="file" id="sc-file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden>
+  </header>
+  <div class="sc-shell">
+    <p class="sc-intro" id="sc-intro">Checks whether this art can be embroidered at the size it sits on your cap, what to simplify, and how it will look in thread.</p>
+
+    <section class="sc-controls" aria-label="Embroidery settings">
+      <div class="sc-field"><label for="sc-placement">Placement</label><select id="sc-placement"></select></div>
+      <div class="sc-field"><span class="sc-lbl" id="sc-sizeLbl">Max area (in)</span>
+        <div class="sc-size"><input id="sc-boxW" type="number" step="0.05" min="0.2" max="16" aria-label="Width in inches"><span>×</span><input id="sc-boxH" type="number" step="0.05" min="0.2" max="16" aria-label="Height in inches"></div></div>
+      <div class="sc-field"><span class="sc-lbl">Technique</span>
+        <div class="seg wrap" role="group" aria-label="Technique" id="sc-tech"><button type="button" data-v="flat" aria-pressed="true">Flat</button><button type="button" data-v="puff" aria-pressed="false">3D puff</button><button type="button" data-v="mix" aria-pressed="false">Mix</button></div></div>
+      <div class="sc-field"><label for="sc-maxColors">Thread colors (max)</label><input id="sc-maxColors" type="number" min="1" max="15" value="6"></div>
+      <div class="sc-field"><label for="sc-thinMode">Thin lines</label><select id="sc-thinMode"><option value="expand">Expand</option><option value="remove">Remove</option><option value="leave">Leave as-is</option></select></div>
+      <div class="sc-field"><label for="sc-lineTarget">Expand thin lines to (mm)</label><div class="sc-inline"><input id="sc-lineTarget" type="number" min="1.3" max="6" step="0.1" value="1.3"><span class="sc-hint mono" id="sc-targetIn">0.051 in</span></div></div>
+      <div class="sc-field"><label for="sc-smooth">Smooth edges and details</label><select id="sc-smooth"><option value="0">Off</option><option value="1" selected>Light</option><option value="2">Medium</option><option value="3">Strong</option></select></div>
+      <div class="sc-field"><span class="sc-lbl">Background</span><label class="sc-checkrow"><input type="checkbox" id="sc-knockout" checked> Leave unstitched</label></div>
+      <div class="sc-field wide"><span class="sc-lbl" id="sc-fabLbl">Hat color</span><div class="sc-swatches" id="sc-fabrics" role="radiogroup" aria-labelledby="sc-fabLbl"></div></div>
+    </section>
+
+    <section class="sc-workspace">
+      <div class="sc-card sc-stagecard" id="sc-stagecard">
+        <div class="sc-stagehead">
+          <div class="sc-tabs" role="tablist" id="sc-tabs" aria-label="View">
+            <button role="tab" type="button" data-view="stitched" aria-selected="true">In thread</button>
+            <button role="tab" type="button" data-view="simplified" aria-selected="false">Simplified</button>
+            <button role="tab" type="button" data-view="problems" aria-selected="false">Problem areas</button>
+            <button role="tab" type="button" data-view="original" aria-selected="false">Original</button>
+          </div>
+          <div class="sc-dims mono" id="sc-dims"></div>
+        </div>
+        <div class="sc-stage">
+          <div class="sc-corner">in</div>
+          <div class="rtop" id="sc-rtop"></div>
+          <div class="rleft" id="sc-rleft"></div>
+          <div class="sc-cwrap" id="sc-cwrap">
+            <canvas id="sc-canvas" width="1026" height="514" role="img" aria-label="Embroidery preview"></canvas>
+            <div class="sc-tag" id="sc-sampleTag" hidden>Sample artwork</div>
+            <div class="sc-busy" id="sc-busy" hidden><span id="sc-busyText">Measuring…</span></div>
+            <div class="sc-dropmsg" id="sc-dropmsg" hidden>Drop the image to check it</div>
+            <div class="sc-err" id="sc-stageErr" hidden></div>
+          </div>
+        </div>
+        <div class="sc-legend" id="sc-legend"></div>
+        <p class="note accent" id="sc-mixHint" hidden>Mix mode: click any element in the In thread or Simplified view to switch it between puff and flat, or set a whole thread color in the palette.</p>
+        <div class="sc-stagefoot">
+          <p class="note" id="sc-viewNote"></p>
+          <div class="sc-saves">
+            <button class="btn small quiet" type="button" id="sc-resetPuff" hidden>Reset puff choices</button>
+            <button class="btn small" type="button" id="sc-saveSimple" hidden>Save simplified PNG</button>
+            <button class="btn small" type="button" id="sc-saveStitch" hidden>Save preview PNG</button>
+          </div>
+        </div>
+        <div class="sc-puton">
+          <label class="sc-lbl" for="sc-target">Put the simplified art on the</label>
+          <select id="sc-target"><option value="front">Front</option><option value="left">Left side</option><option value="right">Right side</option><option value="back">Back</option></select>
+          <button class="btn primary" type="button" id="sc-putBtn">Put on hat as embroidery</button>
+          <p class="note" id="sc-putNote">Shows it on the 3D hat with the Embroidered finish. Undo in the studio brings back the original.</p>
+        </div>
+      </div>
+
+      <aside class="sc-card" aria-label="Check results">
+        <div class="verdict" id="sc-verdict" aria-live="polite"></div>
+        <ul class="checks" id="sc-checks"></ul>
+        <div class="block"><h3>Thread palette</h3><div id="sc-threads"></div></div>
+        <div class="block"><h3>Size and stitches</h3><div id="sc-stats"></div></div>
+      </aside>
+    </section>
+
+    <section class="sc-sec" aria-labelledby="sc-recsH">
+      <div class="sechead"><h2 id="sc-recsH">What to change</h2><p>In priority order. Measurements are taken at the embroidered size shown on the rulers.</p></div>
+      <ol class="reclist" id="sc-recs"></ol>
+    </section>
+
+    <section class="sc-sec" aria-labelledby="sc-revH">
+      <div class="sechead"><h2 id="sc-revH">Claude's design review</h2><p>The checks above measure pixels. Claude looks at the design itself: what the text says, which elements carry the idea, and what a digitizer would cut.</p></div>
+      <div class="review">
+        <div class="reviewbar">
+          <button class="btn primary" type="button" id="sc-askClaude" disabled>Ask Claude to review</button>
+          <button class="btn" type="button" id="sc-stopClaude" hidden>Stop</button>
+          <span class="note" id="sc-reviewNote">Available when this page is open in Claude.</span>
+        </div>
+        <div id="sc-reviewOut"></div>
+      </div>
+    </section>
+
+    <section class="sc-sec" aria-labelledby="sc-rulesH">
+      <div class="sechead"><h2 id="sc-rulesH">Rules this check uses</h2><p>Gathered from print-on-demand embroidery specs and digitizing software documentation. Your own decorator's spec sheet wins if it differs.</p></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Rule</th><th>Value used</th><th>Sources</th></tr></thead>
+          <tbody>
+            <tr><td>Minimum text height</td><td class="v">0.25 in (6.35 mm); letters under 0.1 in may be dropped</td><td><a href="https://help.printful.com/hc/en-us/articles/28727397325340-How-should-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printful</a> · <a href="https://help.printify.com/hc/en-us/articles/4483608843921-How-do-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printify</a> · <a href="https://support.gelato.com/en/articles/8996221-embroidery-design-guidelines" target="_blank" rel="noopener">Gelato</a></td></tr>
+            <tr><td>Minimum line or shape thickness</td><td class="v">0.05 in (1.27 mm); thinner lines become a single run stitch</td><td><a href="https://help.printify.com/hc/en-us/articles/4483608843921-How-do-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printify</a> · <a href="https://support.gelato.com/en/articles/8996221-embroidery-design-guidelines" target="_blank" rel="noopener">Gelato</a></td></tr>
+            <tr><td>Thread colors per design</td><td class="v">Up to 6 (cap jobs usually run 1–6)</td><td><a href="https://help.printful.com/hc/en-us/articles/28727397325340-How-should-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printful</a> · <a href="https://exclaim.gg/guide/design/embroidery" target="_blank" rel="noopener">Exclaim</a> · <a href="https://madegooddesigns.com/hat-design/" target="_blank" rel="noopener">Made Good Designs</a></td></tr>
+            <tr><td>Gradients, shadows, glows</td><td class="v">Not reproducible; two threads don't blend</td><td><a href="https://help.bystadium.com/hc/en-us/articles/40706833307031-Embroidery-Guidelines" target="_blank" rel="noopener">Stadium</a> · <a href="https://www.inkthreadable.co.uk/how-to-create-premium-embroidery-designs" target="_blank" rel="noopener">Inkthreadable</a></td></tr>
+            <tr><td>Satin vs. fill</td><td class="v">Satin from 0.05 in up to about 10 mm (0.4 in) wide; tatami fill above that (satin can stretch to 0.5 in)</td><td><a href="https://help.fourthwall.com/create-and-sell-products/best-practices/embroidery-best-practices.md" target="_blank" rel="noopener">Fourthwall</a> · <a href="https://wilcom.com/resources/blog/embroidery-stitch-techniques" target="_blank" rel="noopener">Wilcom</a></td></tr>
+            <tr><td>Narrow gaps</td><td class="v">Under 0.05 in: fill with thread rather than leave open</td><td><a href="https://help.printful.com/hc/en-us/articles/28727397325340-How-should-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printful</a></td></tr>
+            <tr><td>3D puff</td><td class="v">Strokes 0.2–0.5 in; one puff color is safest, about ¼ in between colors</td><td><a href="https://help.printful.com/hc/en-us/articles/28727397325340-How-should-I-prepare-my-design-for-embroidery" target="_blank" rel="noopener">Printful</a> · <a href="https://help.fourthwall.com/create-and-sell-products/best-practices/embroidery-best-practices.md" target="_blank" rel="noopener">Fourthwall</a> · <a href="https://blog.ignitiondrawing.com/?p=374" target="_blank" rel="noopener">Ignition Drawing</a></td></tr>
+            <tr><td>Puff and flat in one design</td><td class="v">Common "combo" option; some print-on-demand services don't allow both in one area</td><td><a href="https://www.brokenarrowwear.com/3D-embroidery.html" target="_blank" rel="noopener">Broken Arrow</a> · <a href="https://www.printful.com/jp/glossary/3d-puff-embroidery" target="_blank" rel="noopener">Printful</a></td></tr>
+            <tr><td>Cap front area</td><td class="v">Up to about 4.5 × 2.25 in</td><td><a href="https://printlouisville.pixfizz.com/site/services/embroidery/artwork" target="_blank" rel="noopener">Print Louisville</a></td></tr>
+            <tr><td>Center and back seams</td><td class="v">Keep thin text and fine lines off the seam</td><td><a href="https://madegooddesigns.com/hat-design/" target="_blank" rel="noopener">Made Good Designs</a> · <a href="https://help.bystadium.com/hc/en-us/articles/40706833307031-Embroidery-Guidelines" target="_blank" rel="noopener">Stadium</a></td></tr>
+            <tr><td>Stitch count</td><td class="v">15,000 max for hats and chest; 30,000 for large areas</td><td><a href="https://printify.com/printify-embroidery-quality-standards/" target="_blank" rel="noopener">Printify quality standards</a></td></tr>
+            <tr><td>File resolution</td><td class="v">150 DPI minimum; vector preferred</td><td><a href="https://support.gelato.com/en/articles/8996221-embroidery-design-guidelines" target="_blank" rel="noopener">Gelato</a></td></tr>
+            <tr><td>Contrast with the hat</td><td class="v">Light thread on dark fabric, or the reverse</td><td><a href="https://exclaim.gg/guide/design/embroidery" target="_blank" rel="noopener">Exclaim</a></td></tr>
+            <tr><td>Stitch estimate</td><td class="v">1,500–2,000 stitches per sq in of coverage</td><td>Rule of thumb; your digitizer's file gives the real count</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="foot">Everything runs in your browser. The thread preview is a simulation of tatami fill and satin columns, not a digitized file; approve a stitched sample before a production run.</p>
+    </section>
+  </div>
 </div>
 
 <div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
@@ -425,15 +717,32 @@ const maxAniso=renderer.capabilities.getMaxAnisotropy();
 
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(30,1,0.5,400);
-scene.add(new THREE.HemisphereLight(0xffffff,0x9aa0a8,0.78));
-const key=new THREE.DirectionalLight(0xffffff,0.82);
+scene.add(new THREE.HemisphereLight(0xffffff,0x9aa0a8,0.2));
+const key=new THREE.DirectionalLight(0xffffff,0.5);
 key.position.set(10,22,14);key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);
 Object.assign(key.shadow.camera,{left:-20,right:20,top:20,bottom:-20,near:1,far:80});
 key.shadow.bias=-0.0006;key.shadow.normalBias=0.03;
 scene.add(key);
-const fill=new THREE.DirectionalLight(0xffffff,0.32);fill.position.set(-12,6,-8);scene.add(fill);
-const rim=new THREE.DirectionalLight(0xffffff,0.22);rim.position.set(0,-10,6);scene.add(rim);
+const fill=new THREE.DirectionalLight(0xffffff,0.16);fill.position.set(-12,6,-8);scene.add(fill);
+const rim=new THREE.DirectionalLight(0xffffff,0.12);rim.position.set(0,-10,6);scene.add(rim);
+// Studio lighting: a photo studio built as an environment (a bright ceiling falling off to a darker floor,
+// a large soft box up front right, a fill panel on the left and a strip light behind), so the cloth gets
+// broad, wrapped light and a soft sheen like the product photos, instead of hard CG lamps.
+let STUDIO_OK=false;
+try{
+  const es=new THREE.Scene(),sg=new THREE.SphereGeometry(50,48,24),sp=sg.attributes.position,col=[];
+  for(let i=0;i<sp.count;i++){const y=sp.getY(i)/50,t=y>0?0.5+0.25*Math.pow(y,0.8):0.5+0.32*y;col.push(t,t,t*1.02);}
+  sg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  es.add(new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide})));
+  const box=(w,h,x,y,z,I)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(I,I,I),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);es.add(m);};
+  box(30,22,22,30,26,2.2);   // key soft box, up front right
+  box(24,18,-30,14,10,0.9);  // fill panel, left
+  box(40,9,0,42,-16,1.2);    // strip light, above and behind
+  const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(es,0.04).texture;pm.dispose();
+  STUDIO_OK=true;
+}catch(e){console.warn('studio lighting skipped',e);}
+if(!STUDIO_OK){scene.children.forEach(o=>{if(o.isHemisphereLight)o.intensity=0.78;});key.intensity=0.82;fill.intensity=0.32;rim.intensity=0.22;}
 
 /* ---------- crown geometry ---------- */
 const A=8.1,B=10.0,H=VISOR?(HV?6.93:4.75):CAMP?10.0:TRUCK?10.5:SIX?10.3:FLAT?10.4:DAD?9.4:BUCKET?8.0:9.5;
@@ -555,11 +864,22 @@ function profileST(th,a){
 }
 // visor band height, as a fraction of the front height: tall over the forehead, tapering lower toward the back strap
 function visorH(th){const c=(1+Math.cos(th))/2;return HV?0.42+0.58*Math.pow(c,1.1):0.5+0.5*Math.pow(c,0.9);}
+// Small irregularities so the crown doesn't read as a perfect CG surface: gentle, uneven waves in the fabric
+// and a little puckering beside each vertical seam. Zero at the base edge and at the top, so nothing detaches.
+const PUCKER_SEAMS=(BUCKET||HV)?[]:VISOR?[SEAM_TH[0]]:CAMP?[]:SIX?[SEAM_TH[0],SEAM_TH[1],Math.PI]:[SEAM_TH[0],SEAM_TH[1],Math.PI].concat((TRUCK||DAD||FLAT)?[0]:[]);
+function softShape(th,a){
+  if(BUCKET||a<=0||a>=1)return 0;
+  const k=Math.sin(Math.PI*a),soft=(DAD||CAMP)?1.6:1;
+  let w=0.028*Math.sin(3*th+0.7)*Math.sin(Math.PI*a*1.2)+0.014*Math.sin(7*th-1.1+2.3*a)+0.008*Math.sin(13*th+0.4-3.1*a);
+  const at=Math.abs(Math.atan2(Math.sin(th),Math.cos(th)));
+  for(const sv of PUCKER_SEAMS){const d=Math.abs(at-sv);if(d<0.2)w+=0.022*Math.exp(-(d/0.06)*(d/0.06))*Math.sin(a*46+sv*5);}
+  return w*k*soft;
+}
 function crownPoint(th,a){
   const st=profileST(th,a),s=st[0];
   const dx=A*Math.sin(th),dz=B*Math.cos(th)-ZA;
   let nx=Math.sin(th)/A,nz=Math.cos(th)/B;const nl=Math.hypot(nx,nz);nx/=nl;nz/=nl;
-  const off=panelShape(th,a)*s;
+  const off=(panelShape(th,a)+softShape(th,a))*s;
   return[dx*s+nx*off,H*st[1]*(VISOR?visorH(th):1),ZA+dz*s+nz*off];
 }
 function crownS(a){return profAt(PROF_SIDE,a)[0];}
@@ -603,7 +923,7 @@ const crownMat=new THREE.MeshStandardMaterial({map:crownTex,roughness:0.86,metal
 const crown=new THREE.Mesh(crownGeo,crownMat);crown.castShadow=true;scene.add(crown);
 const insideCanvas=document.createElement('canvas');insideCanvas.width=CW;insideCanvas.height=CH;
 const insideTex=new THREE.CanvasTexture(insideCanvas);insideTex.encoding=THREE.sRGBEncoding;insideTex.anisotropy=maxAniso;
-const liningMat=new THREE.MeshStandardMaterial({map:insideTex,roughness:0.9,metalness:0,side:THREE.BackSide,alphaTest:0.5});
+const liningMat=new THREE.MeshStandardMaterial({map:insideTex,roughness:0.9,metalness:0,side:THREE.BackSide,alphaTest:0.5,envMapIntensity:0.55});
 scene.add(new THREE.Mesh(crownGeo,liningMat));
 // visor: the open top edge is turned and stitched, so give it a little thickness
 const visorEdgeMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.86});
@@ -788,6 +1108,7 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     g.moveTo(pts[0][0],CH+2);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(side>0?CW+2:-2,pts[pts.length-1][1]);g.lineTo(side>0?CW+2:-2,CH+2);g.closePath();g.fill();
     g.globalCompositeOperation='source-over';
   }
+  fabricGrain(g,CW,CH,dark);
   tex.needsUpdate=true;
 }
 
@@ -813,7 +1134,7 @@ function buildTape(sv,a0){
   g.setIndex(idx);g.computeVertexNormals();
   const cv=document.createElement('canvas');cv.width=Math.max(64,Math.round(len*110));cv.height=Math.round(2*HW*110);
   const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
-  const mat=new THREE.MeshStandardMaterial({map:tex,roughness:0.9,side:THREE.DoubleSide});
+  const mat=new THREE.MeshStandardMaterial({map:tex,roughness:0.9,side:THREE.DoubleSide,envMapIntensity:0.55});
   scene.add(new THREE.Mesh(g,mat));
   TAPES.push({cv,tex,start:(startLen||0)/len});
 }
@@ -842,7 +1163,7 @@ function buildTapeCurve(pts){ // pts: [[theta,a],...] along a seam
   g.setIndex(idx);g.computeVertexNormals();
   const cv=document.createElement('canvas');cv.width=Math.max(64,Math.round(len*110));cv.height=Math.round(2*HW*110);
   const tex=new THREE.CanvasTexture(cv);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=maxAniso;
-  scene.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:0.9,side:THREE.DoubleSide})));
+  scene.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:tex,roughness:0.9,side:THREE.DoubleSide,envMapIntensity:0.55})));
   TAPES.push({cv,tex,start:(startLen||0)/len});
 }
 if(BUCKET){
@@ -891,7 +1212,7 @@ function paintTape(){
 }
 
 /* sweatband: a band just inside the crown base, running from one side of the snap opening to the other */
-const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.95,side:THREE.DoubleSide});
+const sweatMat=new THREE.MeshStandardMaterial({color:lin(colors.crown),roughness:0.95,side:THREE.DoubleSide,envMapIntensity:0.6});
 (function(){
   const N=220,lim=Math.PI-OPEN_W+0.02,ys=(VISOR&&!HV)?[0.02,0.75,1.5,2.2]:[0.02,0.9,1.9,2.9],pos=[],idx=[];
   const aFor=(th,y)=>{let lo=0,hi=VISOR?1:0.6;for(let i=0;i<30;i++){const m=(lo+hi)/2;if(crownPoint(th,m)[1]<y)lo=m;else hi=m;}return(lo+hi)/2;};
@@ -930,7 +1251,8 @@ function brimPoint(th,w){
   const sr=BUCKET?0:Math.sin(th)/Math.sin(THB),q=sr*sr;
   const a0=BUCKET?0.42:VISOR?0.16+0.36*q:CAMP?0.04+0.02*q:(SIX||FLAT)?0.07+0.12*q:DAD?0.1+0.2*q:0.2+0.38*q,a1=BUCKET?0.56:VISOR?0.34+0.8*q:CAMP?0.05+0.03*q:(SIX||FLAT)?0.1+0.28*q:DAD?0.15+0.45*q:0.4+0.85*q,D=a1-a0,u=w;
   const h=L/D*(Math.sin(a0+D*u)-Math.sin(a0)),v=L/D*(Math.cos(a0)-Math.cos(a0+D*u));
-  return[ix+hx*h,-v,iz+hz*h];
+  const wav=BUCKET?0:0.03*u*u*Math.sin(4.3*th+0.6); // a real bill is never perfectly even
+  return[ix+hx*h,-v+wav,iz+hz*h];
 }
 function brimSurf(th,w,off){
   const p=brimPoint(th,w);if(!off)return p;const e=1e-3;
@@ -955,23 +1277,27 @@ const underGeo=brimGeo(-BT,false);
 const brimBottom=new THREE.Mesh(underGeo,underMat);brimBottom.castShadow=true;scene.add(brimBottom);
 const edgeMat=new THREE.MeshStandardMaterial({color:lin(colors.brim),roughness:0.8,side:THREE.DoubleSide});
 (function(){
-  const pos=[],idx=[];
-  for(let i=0;i<=NB;i++){const th=-THB+2*THB*i/NB;const p=brimSurf(th,1,BT),q=brimSurf(th,1,-BT);pos.push(p[0],p[1],p[2],q[0],q[1],q[2]);}
-  for(let i=0;i<NB;i++){const a=2*i;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+  const pos=[],idx=[],ER=8; // rows around the rolled edge
+  for(let i=0;i<=NB;i++){const th=-THB+2*THB*i/NB;const p=brimSurf(th,1,BT),q=brimSurf(th,1,-BT),c=brimSurf(th,1,0),b=brimSurf(th,0.97,0);
+    let ox=c[0]-b[0],oy=c[1]-b[1],oz=c[2]-b[2];const ol=Math.hypot(ox,oy,oz)||1;ox/=ol;oy/=ol;oz/=ol;
+    for(let k=0;k<=ER;k++){const f=Math.PI*k/ER,cu=Math.cos(f),bu=BT*0.85*Math.sin(f);
+      pos.push(c[0]+(p[0]-c[0])*cu+ox*bu,c[1]+(p[1]-c[1])*cu+oy*bu,c[2]+(p[2]-c[2])*cu+oz*bu);}}
+  for(let i=0;i<NB;i++)for(let k=0;k<ER;k++){const a=i*(ER+1)+k,b=a+ER+1;idx.push(a,a+1,b,a+1,b+1,b);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
   scene.add(new THREE.Mesh(g,edgeMat));
 })();
+const BRIM_ROWS=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:SIX?[0,1,2,3,4,5,6,7,8,9].map(k=>0.08+k*0.094):FLAT?[0,1,2,3,4,5,6,7].map(k=>0.1+k*0.114):HV?[0.87]:VISOR?[0,1,2,3,4,5,6,7,8].map(k=>0.1+k*0.1):[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
 function paintBrim(){
   const g=brimCanvas.getContext('2d'),W=brimCanvas.width,Hh=brimCanvas.height,base=colors.brim;
-  g.fillStyle=base;g.fillRect(0,0,W,Hh);
+  g.fillStyle=base;g.fillRect(0,0,W,Hh);fabricGrain(g,W,Hh,isDark(base));
   g.strokeStyle=eff('stitchBrim');g.lineWidth=2.4;g.setLineDash([10,6]);
-  const rows=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.86,0.94]:SIX?[0,1,2,3,4,5,6,7,8,9].map(k=>0.08+k*0.094):FLAT?[0,1,2,3,4,5,6,7].map(k=>0.1+k*0.114):HV?[0.87]:VISOR?[0,1,2,3,4,5,6,7,8].map(k=>0.1+k*0.1):[0,1,2,3,4,5,6,7].map(k=>0.13+k*0.105);
+  const rows=BRIM_ROWS;
   for(const w of rows){const y=(1-w)*Hh;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
   g.setLineDash([]);
   if(BUCKET){g.strokeStyle=shade(base,isDark(base)?-0.3:-0.18);g.lineWidth=3;for(const x of[W/2,1,W-1]){g.beginPath();g.moveTo(x,0);g.lineTo(x,Hh);g.stroke();}} // brim seams front and back
   brimTex.needsUpdate=true;
   if(CAMP||SIX||FLAT||BUCKET||HV){ // flat bills are stitched through, so the rows show underneath too
-    const u=underRowCanvas.getContext('2d'),ub=colors.under;u.fillStyle=ub;u.fillRect(0,0,W,Hh);
+    const u=underRowCanvas.getContext('2d'),ub=colors.under;u.fillStyle=ub;u.fillRect(0,0,W,Hh);fabricGrain(u,W,Hh,isDark(ub));
     u.strokeStyle=shade(ub,isDark(ub)?0.2:-0.2);u.lineWidth=2.4;u.setLineDash([10,6]);
     for(const w of rows){const y=(1-w)*Hh;u.beginPath();u.moveTo(0,y);u.lineTo(W,y);u.stroke();}u.setLineDash([]);underRowTex.needsUpdate=true;}
 }
@@ -1704,7 +2030,8 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
   <div class="group"><span class="label">Finish</span><div class="seg wrap" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">Print</button><button data-v="patch">Square patch</button><button data-v="circle">Circle patch</button><button data-v="embroidered">Embroidered</button></div>
     <div class="inline" id="${key}-bcolorwrap" style="margin-top:10px"><label class="check" style="margin:0"><input type="color" id="${key}-bcolor" aria-label="Patch color"> Patch color</label></div>
     <div class="slider" id="${key}-fillwrap"><label for="${key}-fill">Artwork fill</label><output id="${key}-fill-out"></output>
-      <input type="range" id="${key}-fill" data-zone="${key}" data-prop="fill" min="30" max="100" step="1"></div></div>
+      <input type="range" id="${key}-fill" data-zone="${key}" data-prop="fill" min="30" max="100" step="1"></div>
+    ${['front','left','right','back'].includes(key)?'<div class="actions" style="margin-top:12px"><button class="btn" data-act="stitch">Check for embroidery</button></div>':''}</div>
   <div class="group"><span class="label">Placement</span>
     ${sliderHTML(key,'size','Size',z.ranges.size[0],z.ranges.size[1],0.1)}
     ${sliderHTML(key,'h',z.labels.h,z.ranges.h[0],z.ranges.h[1],0.05)}
@@ -1742,6 +2069,7 @@ panels.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const panel=b.closest('.panel');const key=panel&&panel.dataset.panel;if(!ZONES[key])return;const z=ZONES[key];
   const act=b.dataset.act;
   if(act==='upload'){fileTarget=key;$('#fileInput').click();}
+  else if(act==='stitch'){StitchCheck.open(key);}
   else if(act==='sample'){z.source='sample';z.text='';if(key==='under'||key==='inside'){z.fit='fill';z.autoFit=true;}refreshArt(key);syncZoneUI(key);}
   else if(act==='template'){const c=brimTemplate();c.toBlob(bl=>bl&&saveBlob(bl,'underbrim-template.png'),'image/png');}
   else if(act==='clear'){z.source=null;z.text='';z.image=null;z.imageOrig=null;refreshArt(key);syncZoneUI(key);}
@@ -2427,7 +2755,7 @@ function redo(){clearTimeout(undoTimer);commitSnap();if(!redoStack.length)return
 function syncUndoUI(){$('#undoBtn').disabled=!undoStack.length;$('#redoBtn').disabled=!redoStack.length;}
 $('#undoBtn').addEventListener('click',undo);$('#redoBtn').addEventListener('click',redo);
 document.addEventListener('keydown',e=>{
-  if(!(e.ctrlKey||e.metaKey))return;const t=e.target;
+  if(!(e.ctrlKey||e.metaKey))return;if(StitchCheck.isOpen())return;const t=e.target;
   if(t&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&t.type==='text')))return; // let text fields undo their own typing
   const k=e.key.toLowerCase();
   if(k==='z'&&!e.shiftKey){e.preventDefault();undo();}
@@ -2503,6 +2831,1627 @@ async function renderWelcome(){
   const first=$('.style-card[data-pick="'+STYLE+'"]');if(first)first.focus({preventScroll:true});
 }
 renderWelcome();
+
+/* ---------- fabric surface ----------
+   Twill weave, loose fibers and raised thread stitching, baked into normal maps that line up 1:1 with the
+   painted textures (same canvas layout), so the light catches the cloth the way it does on a real cap. */
+let FABRIC_GRAIN=null;
+function fabricGrain(g,W,Hh,dark){
+  if(!FABRIC_GRAIN)return;
+  g.save();g.globalCompositeOperation='source-atop';g.globalAlpha=dark?0.07:0.06;g.fillStyle=FABRIC_GRAIN;g.fillRect(0,0,W,Hh);g.restore();
+}
+function makeGrainPattern(){
+  const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');
+  for(let i=0;i<5200;i++){ // short fibers, a mix of lighter and darker strands, like heathered cotton twill
+    const x=Math.random()*512,y=Math.random()*512,l=3+Math.random()*9,a=0.35+Math.random()*0.5+(Math.random()-0.5)*0.4;
+    g.strokeStyle=Math.random()<0.5?'rgba(255,255,255,'+(0.25+Math.random()*0.5)+')':'rgba(0,0,0,'+(0.25+Math.random()*0.5)+')';
+    g.lineWidth=0.6+Math.random()*0.8;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);g.stroke();
+    for(const ox of[-512,512])for(const oy of[-512,0,512]){if(x+ox+l<0||x+ox-l>512)continue;g.beginPath();g.moveTo(x+ox,y+oy);g.lineTo(x+ox+Math.cos(a)*l,y+oy+Math.sin(a)*l);g.stroke();}
+    for(const oy of[-512,512]){g.beginPath();g.moveTo(x,y+oy);g.lineTo(x+Math.cos(a)*l,y+oy+Math.sin(a)*l);g.stroke();}
+  }
+  return g.createPattern(c,'repeat');
+}
+// W x Hh canvas; su/sv = pixels per cm across/down; mask = ImageData of stitching (bright = thread); wrap = texture wraps across
+function fabricNormalCanvas(W,Hh,su,sv,mask,wrap,seam){
+  const N=W*Hh,h=new Float32Array(N),P=0.085,amp=0.006,ca=0.42,sa=0.91;
+  for(let y=0;y<Hh;y++){const Y=y/sv;
+    for(let x=0;x<W;x++){const X=x/su,i=y*W+x;
+      let r=Math.sin((X*ca+Y*sa)/P*TAU);r=r>0?Math.sqrt(r):-0.6*Math.sqrt(-r);           // rounded twill ribs
+      const yarn=Math.sin((X*sa-Y*ca)/(P*1.7)*TAU);                                       // crossing yarns break the ribs up
+      const hsh=((Math.imul(x,73856093)^Math.imul(y,19349663))>>>8&1023)/1023-0.5;          // fiber noise
+      h[i]=amp*r*(0.85+0.12*yarn)+0.0022*hsh;}}
+  if(mask){ // raised thread: soften the painted stitch lines a little, then lift them off the cloth
+    const d=mask.data,m=new Float32Array(N);
+    for(let i=0;i<N;i++){const k=i*4;m[i]=Math.max(d[k],d[k+1],d[k+2])/255*(d[k+3]/255);}
+    for(let y=1;y<Hh-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;
+      const b=(m[i]*4+m[i-1]+m[i+1]+m[i-W]+m[i+W])/8;
+      if(b>0.02)h[i]+=0.03*b*(0.85+0.15*Math.sin((x/su+y/sv)/0.05*TAU));}
+  }
+  if(seam){ // seam = groove strength 0..1; a sharp crease in the middle, the folded allowance padding up either side
+    const narrow=blurField(blurField(seam,W,Hh,2,wrap),W,Hh,2,wrap),wide=blurField(blurField(seam,W,Hh,12,wrap),W,Hh,12,wrap);
+    for(let i=0;i<N;i++)h[i]+=0.12*wide[i]-0.08*narrow[i];
+  }
+  const c=document.createElement('canvas');c.width=W;c.height=Hh;const g=c.getContext('2d'),img=g.createImageData(W,Hh),o=img.data;
+  for(let y=0;y<Hh;y++){const y0=y>0?y-1:y,y1=y<Hh-1?y+1:y;
+    for(let x=0;x<W;x++){
+      const x0=x>0?x-1:(wrap?W-1:x),x1=x<W-1?x+1:(wrap?0:x);
+      const dx=(h[y*W+x1]-h[y*W+x0])*0.5*su,dy=(h[y1*W+x]-h[y0*W+x])*0.5*sv;
+      let nx=-dx,ny=dy,nz=1;const l=1/Math.sqrt(nx*nx+ny*ny+1);nx*=l;ny*=l;nz*=l;   // canvas rows run down, texture v runs up
+      const k=(y*W+x)*4;o[k]=(nx*0.5+0.5)*255;o[k+1]=(ny*0.5+0.5)*255;o[k+2]=(nz*0.5+0.5)*255;o[k+3]=255;}}
+  g.putImageData(img,0,0);
+  const t=new THREE.CanvasTexture(c);t.anisotropy=maxAniso;return t;
+}
+function blurField(a,W,Hh,r,wrap){ // separable box blur of a W x Hh float field (row-major passes, cache-friendly)
+  const t=new Float32Array(a.length),o=new Float32Array(a.length),n=2*r+1,ix=x=>wrap?((x%W)+W)%W:(x<0?0:x>=W?W-1:x);
+  for(let y=0;y<Hh;y++){const row=y*W;let s=0;
+    for(let k=-r;k<=r;k++)s+=a[row+ix(k)];
+    for(let x=0;x<W;x++){t[row+x]=s/n;const xo=x-r,xi=x+r+1;
+      s+=a[row+(xi<W?xi:ix(xi))]-a[row+(xo>=0?xo:ix(xo))];}}
+  const col=new Float32Array(W);
+  for(let k=-r;k<=r;k++){const rr=Math.max(0,Math.min(Hh-1,k))*W;for(let x=0;x<W;x++)col[x]+=t[rr+x];}
+  for(let y=0;y<Hh;y++){const row=y*W,ri=Math.min(Hh-1,y+r+1)*W,ro=Math.max(0,y-r)*W;
+    for(let x=0;x<W;x++){o[row+x]=col[x]/n;col[x]+=t[ri+x]-t[ro+x];}}
+  return o;
+}
+// where the seams and eyelets are: the crown painted mid-grey with grey thread, so only the darker
+// grooves and eyelet centres stand out
+function seamField(){
+  const sc=document.createElement('canvas');sc.width=CW;sc.height=CH;const saved={...colors},keep=FABRIC_GRAIN,perf=perforated;
+  for(const k in PANEL_RESET)colors[k]=null;colors.stitchCrown='#808080';colors.mesh='#808080';FABRIC_GRAIN=null;perforated=false; // holes can be switched off, so they stay out of the relief
+  try{paintCrownCanvas(sc,{},'#808080','#808080',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;perforated=perf;}
+  const d=sc.getContext('2d').getImageData(0,0,CW,CH).data,f=new Float32Array(CW*CH);
+  for(let i=0;i<f.length;i++){const k=i*4;if(d[k+3]<128)continue;f[i]=Math.max(0,Math.min(1,(120-d[k+1])/22));}
+  return f;
+}
+function buildFabric(){
+  try{FABRIC_GRAIN=makeGrainPattern();}catch(e){FABRIC_GRAIN=null;}
+  try{
+    // stitching mask: the crown painted black with white thread, using the same seam and stitch layout
+    const mc=document.createElement('canvas');mc.width=CW;mc.height=CH;const saved={...colors};
+    for(const k in PANEL_RESET)colors[k]=null;colors.stitchCrown='#ffffff';colors.mesh='#000000';
+    const keep=FABRIC_GRAIN;FABRIC_GRAIN=null;
+    try{paintCrownCanvas(mc,{},'#000000','#000000',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;}
+    let seam=null;try{seam=seamField();}catch(e){console.warn('seam relief skipped',e);}
+    const crownN=fabricNormalCanvas(CW,CH,CW/(TAU*A*1.12),CH/PROFILE_CM,mc.getContext('2d').getImageData(0,0,CW,CH),true,seam);
+    crownMat.normalMap=crownN;crownMat.normalScale.set(0.9,0.9);crownMat.needsUpdate=true;
+    liningMat.normalMap=crownN;liningMat.normalScale.set(0.6,0.6);liningMat.needsUpdate=true;
+  }catch(e){console.warn('crown fabric map skipped',e);}
+  try{
+    const BW=brimCanvas.width,BH=brimCanvas.height;let L0=0,L1=0,p0=brimFlat(-THB,0),p1=brimFlat(-THB,1);
+    for(let i=1;i<=120;i++){const th=-THB+2*THB*i/120,q0=brimFlat(th,0),q1=brimFlat(th,1);L0+=Math.hypot(q0[0]-p0[0],q0[1]-p0[1]);L1+=Math.hypot(q1[0]-p1[0],q1[1]-p1[1]);p0=q0;p1=q1;}
+    const su=BW/((L0+L1)/2),sv=BH/Math.max(1,brimFlat(0,1)[2]);
+    const rc=document.createElement('canvas');rc.width=BW;rc.height=BH;const rg=rc.getContext('2d');
+    rg.fillStyle='#000';rg.fillRect(0,0,BW,BH);rg.strokeStyle='#fff';rg.lineWidth=2.4;rg.setLineDash([10,6]);
+    for(const w of BRIM_ROWS){const y=(1-w)*BH;rg.beginPath();rg.moveTo(0,y);rg.lineTo(BW,y);rg.stroke();}
+    const rows=rg.getImageData(0,0,BW,BH);
+    brimTopMat.normalMap=fabricNormalCanvas(BW,BH,su,sv,rows,false);brimTopMat.normalScale.set(0.9,0.9);brimTopMat.needsUpdate=true;
+    underMat.normalMap=(CAMP||SIX||FLAT||BUCKET||HV)?brimTopMat.normalMap:fabricNormalCanvas(BW,BH,su,sv,null,false);
+    underMat.normalScale.set(0.8,0.8);underMat.needsUpdate=true;
+  }catch(e){console.warn('brim fabric map skipped',e);}
+}
+buildFabric();
+
+/* ---------- Stitch check: is this art embroiderable, and what to simplify ---------- */
+const StitchCheck = (function () {
+'use strict';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LIN = new Float32Array(256);
+for (let i = 0; i < 256; i++) { const c = i / 255; LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+
+/* ---------------- reference data ---------------- */
+const PLACEMENTS = [
+  { id: 'cap6', name: 'Cap front · 6-panel', w: 4.5, h: 2.25, seam: true },
+  { id: 'cap5', name: 'Cap front · 5-panel / foam front', w: 4.5, h: 2.25 },
+  { id: 'dad', name: 'Cap front · unstructured (dad cap)', w: 4.0, h: 1.75, seam: true, soft: true },
+  { id: 'side', name: 'Cap side', w: 2.25, h: 1.25 },
+  { id: 'back', name: 'Cap back · above strap', w: 2.5, h: 1.0 },
+  { id: 'chest', name: 'Left chest', w: 3.5, h: 3.5 },
+  { id: 'fullback', name: 'Full back', w: 10, h: 10, large: true },
+  { id: 'custom', name: 'Custom size' }
+];
+const HAT_PLACE = { id: 'hat', name: 'As placed on the hat', w: 1, h: 1 };
+const DEFAULT_PLACE = (TRUCK || FLAT) ? 'cap6' : DAD ? 'dad' : 'cap5';
+const THREADS = [
+  ['White','#F7F7F4'],['Natural','#EEE5CF'],['Silver','#B9BDC2'],['Charcoal','#4A4E55'],['Black','#161618'],
+  ['Navy','#1E2A47'],['Slate Blue','#55678C'],['Royal Blue','#2350A8'],['Sky Blue','#7DB0DD'],['Light Blue','#B8D4EB'],
+  ['Teal','#127A80'],['Turquoise','#2BA8B4'],['Kelly Green','#1E8A47'],['Forest Green','#1D4A31'],['Lime','#9CC63E'],
+  ['Olive','#69693A'],['Sage','#9BAA8A'],['Mint','#A9DCC2'],['Lemon','#F6DC3A'],['Gold','#E0A61E'],
+  ['Old Gold','#B38B3F'],['Orange','#EF7622'],['Burnt Orange','#C2561E'],['Peach','#F5BA8E'],['Coral','#EE6F5D'],
+  ['Red','#CA2030'],['Maroon','#6E1D29'],['Pink','#F2A9C2'],['Hot Pink','#E0457F'],['Magenta','#B8216F'],
+  ['Purple','#5C2F88'],['Lavender','#B9A7D7'],['Plum','#7A3F6E'],['Mauve','#B07A93'],['Brown','#5A3A23'],
+  ['Tan','#C8A57B'],['Khaki','#B6A57F'],['Butter','#F4E39A']
+].map(([name, hex]) => ({ name, hex, rgb: hexRgb(hex), lab: labOfRgb(hexRgb(hex)) }));
+const FABRICS = [
+  ['black','Black','#1C1C1F'],['navy','Navy','#1F2940'],['charcoal','Charcoal','#3C3F45'],['heather','Heather grey','#9A9B9E'],
+  ['stone','Stone','#D8D0BF'],['khaki','Khaki','#B8A684'],['white','White','#F1F1EE'],['olive','Olive','#55583A'],
+  ['forest','Forest','#1F3B2C'],['burgundy','Burgundy','#5A1F2A'],['royal','Royal','#25479A']
+].map(([id, name, hex]) => ({ id, name, hex, rgb: hexRgb(hex), lab: labOfRgb(hexRgb(hex)) }));
+const RULE = { text: 6.35, textDrop: 2.54, line: 1.27, gap: 1.27, satinMax: 10, puffMin: 5.08, puffMax: 12.7, tiny: 2.5, dpi: 150 };
+
+/* ---------------- color + math utils ---------------- */
+function hexRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function labF(t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; }
+function rgb2lab(r, g, b, out, o) {
+  const R = LIN[r], G = LIN[g], B = LIN[b];
+  const x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, y = R * 0.2126 + G * 0.7152 + B * 0.0722, z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+  const fx = labF(x), fy = labF(y), fz = labF(z);
+  out[o] = 116 * fy - 16; out[o + 1] = 500 * (fx - fy); out[o + 2] = 200 * (fy - fz);
+}
+function labOfRgb(rgb) { const o = new Float32Array(3); rgb2lab(rgb[0], rgb[1], rgb[2], o, 0); return o; }
+function dE(a, b) { const x = a[0] - b[0], y = a[1] - b[1], z = a[2] - b[2]; return Math.sqrt(x * x + y * y + z * z); }
+function dEi(A, i, B, j) { const x = A[i] - B[j], y = A[i + 1] - B[j + 1], z = A[i + 2] - B[j + 2]; return Math.sqrt(x * x + y * y + z * z); }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+/* Exact Euclidean distance transform (Felzenszwalb). feat[i]=1 marks distance-0 pixels. */
+function dt1d(f, n, d, v, z, nn) {
+  let k = 0; v[0] = 0; z[0] = -Infinity; z[1] = Infinity;
+  for (let q = 1; q < n; q++) {
+    let s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]);
+    while (s <= z[k]) { k--; s = ((f[q] + q * q) - (f[v[k]] + v[k] * v[k])) / (2 * q - 2 * v[k]); }
+    k++; v[k] = q; z[k] = s; z[k + 1] = Infinity;
+  }
+  k = 0;
+  for (let q = 0; q < n; q++) { while (z[k + 1] < q) k++; const dq = q - v[k]; d[q] = dq * dq + f[v[k]]; nn[q] = v[k]; }
+}
+function edt(feat, W, H, wantIdx) {
+  const N = W * H, INF = 1e20;
+  const f = new Float64Array(W), d = new Float64Array(W), z = new Float64Array(W + 1), v = new Int32Array(W), nn = new Int32Array(W);
+  const g = new Float32Array(N), colY = wantIdx ? new Int32Array(N) : null, last = new Float64Array(W);
+  /* pass 1: vertical distance to the nearest feature in each column, as two row-major scans */
+  last.fill(-1e9);
+  for (let y = 0; y < H; y++) { const row = y * W; for (let x = 0; x < W; x++) { const i = row + x; if (feat[i]) last[x] = y; g[i] = y - last[x]; if (colY) colY[i] = last[x]; } }
+  last.fill(1e9);
+  for (let y = H - 1; y >= 0; y--) { const row = y * W; for (let x = 0; x < W; x++) { const i = row + x; if (feat[i]) last[x] = y; const dd = last[x] - y; if (dd < g[i]) { g[i] = dd; if (colY) colY[i] = last[x]; } } }
+  /* pass 2: lower envelope of parabolas along each row */
+  const out = new Float32Array(N), idx = wantIdx ? new Int32Array(N) : null;
+  for (let y = 0; y < H; y++) {
+    const row = y * W;
+    for (let x = 0; x < W; x++) { const gv = g[row + x]; f[x] = gv > 1e8 ? INF : gv * gv; }
+    dt1d(f, W, d, v, z, nn);
+    for (let x = 0; x < W; x++) { out[row + x] = Math.sqrt(d[x]); if (idx) { const xs = nn[x]; idx[row + x] = colY[row + xs] * W + xs; } }
+  }
+  return wantIdx ? { dist: out, idx } : out;
+}
+/* Morphological opening: mask pixels covered by a disk of radius r that fits inside the mask. D = distance to nearest non-mask pixel. */
+function openMask(mask, D, W, H, r) {
+  const N = W * H, er = new Uint8Array(N); let any = false;
+  for (let i = 0; i < N; i++) if (mask[i] && D[i] > r) { er[i] = 1; any = true; }
+  const out = new Uint8Array(N);
+  if (!any) return out;
+  const De = edt(er, W, H);
+  const r2 = r + 0.5;
+  for (let i = 0; i < N; i++) if (mask[i] && De[i] <= r2) out[i] = 1;
+  return out;
+}
+/* Connected components (8-connected). mode 0: labels >= 0 grouped by value; mode 1: binary mask value 1. */
+function components(arr, W, H, mode, extra) {
+  const N = W * H, id = new Int32Array(N).fill(-1), stack = new Int32Array(N), comps = [];
+  for (let s = 0; s < N; s++) {
+    if (id[s] !== -1) continue;
+    const v = arr[s];
+    if (mode === 0 ? v < 0 : v !== 1) continue;
+    const cid = comps.length; let sp = 0; stack[sp++] = s; id[s] = cid;
+    let area = 0, minx = W, maxx = -1, miny = H, maxy = -1, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, mx = 0, touch = false;
+    while (sp > 0) {
+      const p = stack[--sp], x = p % W, y = (p - x) / W;
+      area++; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+      sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y;
+      if (extra) { const e = extra[p]; if (e > mx) mx = e; }
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) touch = true;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy; if (ny < 0 || ny >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const nx = x + dx; if (nx < 0 || nx >= W) continue;
+          const q = ny * W + nx;
+          if (id[q] === -1 && arr[q] === v) { id[q] = cid; stack[sp++] = q; }
+        }
+      }
+    }
+    const cx = sx / area, cy = sy / area;
+    comps.push({ label: v, first: s, area, minx, maxx, miny, maxy, cx, cy, vxx: sxx / area - cx * cx, vyy: syy / area - cy * cy, vxy: sxy / area - cx * cy, maxE: mx, touch });
+  }
+  return { id, comps };
+}
+/* Reassign pixels marked -2 from their neighbours, growing inward. */
+function fillHoles(L, W, H, allowFabric) {
+  let holes = [];
+  for (let i = 0; i < L.length; i++) if (L[i] === -2) holes.push(i);
+  const cand = new Int16Array(8), cnt = new Int16Array(8);
+  for (let it = 0; it < 120 && holes.length; it++) {
+    const upd = [], next = [];
+    for (let h = 0; h < holes.length; h++) {
+      const i = holes[h], x = i % W, y = (i - x) / W; let n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy; if (ny < 0 || ny >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const nx = x + dx; if (nx < 0 || nx >= W) continue;
+          const l = L[ny * W + nx];
+          if (l === -2 || (!allowFabric && l === -1)) continue;
+          let k = 0; while (k < n && cand[k] !== l) k++;
+          if (k === n) { cand[n] = l; cnt[n] = 1; n++; } else cnt[k]++;
+        }
+      }
+      if (!n) { next.push(i); continue; }
+      let b = 0; for (let k = 1; k < n; k++) if (cnt[k] > cnt[b]) b = k;
+      upd.push(i, cand[b]);
+    }
+    if (!upd.length) break;
+    for (let j = 0; j < upd.length; j += 2) L[upd[j]] = upd[j + 1];
+    holes = next;
+  }
+  for (let h = 0; h < holes.length; h++) L[holes[h]] = -1;
+}
+/* Remove 1–2 pixel specks without eroding 1 px lines. */
+function despeckle(L, W, H) {
+  const out = L.slice(), cand = new Int16Array(9), cnt = new Int16Array(9);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, own = L[i]; let n = 0, ownC = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      const ny = y + dy; if (ny < 0 || ny >= H) continue;
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx; if (nx < 0 || nx >= W) continue;
+        const l = L[ny * W + nx];
+        if (l === own) { ownC++; continue; }
+        let k = 0; while (k < n && cand[k] !== l) k++;
+        if (k === n) { cand[n] = l; cnt[n] = 1; n++; } else cnt[k]++;
+      }
+    }
+    if (ownC <= 2 && n) { let b = 0; for (let k = 1; k < n; k++) if (cnt[k] > cnt[b]) b = k; if (cnt[b] >= 4) out[i] = cand[b]; }
+  }
+  return out;
+}
+function boxBlur(src, W, H, r) {
+  const tmp = new Float32Array(W * H), out = new Float32Array(W * H), n = 2 * r + 1;
+  for (let y = 0; y < H; y++) {
+    const row = y * W; let acc = 0;
+    for (let x = -r; x <= r; x++) acc += src[row + clamp(x, 0, W - 1)];
+    for (let x = 0; x < W; x++) { tmp[row + x] = acc / n; acc += src[row + clamp(x + r + 1, 0, W - 1)] - src[row + clamp(x - r, 0, W - 1)]; }
+  }
+  for (let x = 0; x < W; x++) {
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[clamp(y, 0, H - 1) * W + x];
+    for (let y = 0; y < H; y++) { out[y * W + x] = acc / n; acc += tmp[clamp(y + r + 1, 0, H - 1) * W + x] - tmp[clamp(y - r, 0, H - 1) * W + x]; }
+  }
+  return out;
+}
+/* k-means in Lab with a given initial centroid set. */
+function lloyd(data, n, C, K, iters) {
+  const acc = new Float64Array(K * 3), cnt = new Float64Array(K);
+  for (let it = 0; it < iters; it++) {
+    acc.fill(0); cnt.fill(0);
+    for (let i = 0; i < n; i++) {
+      const o = i * 3; let best = 0, bd = Infinity;
+      for (let k = 0; k < K; k++) { const a = data[o] - C[k * 3], b = data[o + 1] - C[k * 3 + 1], c = data[o + 2] - C[k * 3 + 2]; const d = a * a + b * b + c * c; if (d < bd) { bd = d; best = k; } }
+      acc[best * 3] += data[o]; acc[best * 3 + 1] += data[o + 1]; acc[best * 3 + 2] += data[o + 2]; cnt[best]++;
+    }
+    for (let k = 0; k < K; k++) if (cnt[k]) { C[k * 3] = acc[k * 3] / cnt[k]; C[k * 3 + 1] = acc[k * 3 + 1] / cnt[k]; C[k * 3 + 2] = acc[k * 3 + 2] / cnt[k]; }
+  }
+  return cnt;
+}
+function kmeansPP(data, n, K, rng) {
+  const C = new Float32Array(K * 3), d2 = new Float64Array(n).fill(Infinity);
+  let idx = Math.floor(rng() * n), k = 0;
+  C.set(data.subarray(idx * 3, idx * 3 + 3), 0); k = 1;
+  for (; k < K; k++) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) { const o = i * 3, c = (k - 1) * 3; const a = data[o] - C[c], b = data[o + 1] - C[c + 1], e = data[o + 2] - C[c + 2]; const d = a * a + b * b + e * e; if (d < d2[i]) d2[i] = d; sum += d2[i]; }
+    if (sum < 1e-6) break;
+    let r = rng() * sum; idx = n - 1;
+    for (let i = 0; i < n; i++) { r -= d2[i]; if (r <= 0) { idx = i; break; } }
+    C.set(data.subarray(idx * 3, idx * 3 + 3), k * 3);
+  }
+  const Kf = k;
+  const cnt = lloyd(data, n, C, Kf, 10);
+  return { C: C.subarray(0, Kf * 3), K: Kf, cnt };
+}
+function nearestThread(lab) { let b = 0, bd = Infinity; for (let i = 0; i < THREADS.length; i++) { const d = dE(lab, THREADS[i].lab); if (d < bd) { bd = d; b = i; } } return b; }
+
+/* ---------------- sources ---------------- */
+function sourceFromDrawable(img, w, h, isVector) {
+  const k = isVector ? 1600 / Math.max(w, h) : Math.min(1, 1600 / Math.max(w, h));
+  const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, cw, ch);
+  return { canvas: c, ctx, w: cw, h: ch, origW: Math.round(w), origH: Math.round(h), isVector, scaleFromOrig: k };
+}
+async function makeSample() {
+  try { await Promise.race([document.fonts.load('900 120px Archivo'), document.fonts.load('600 30px Archivo'), new Promise(r => setTimeout(r, 1800))]); } catch (e) { /* fall back to system fonts */ }
+  const W = 1400, H = 640, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const cx = 300, cy = 320, R = 262;
+  x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip();
+  const g = x.createLinearGradient(0, 58, 0, 582); g.addColorStop(0, '#5B3A8E'); g.addColorStop(0.5, '#F2577E'); g.addColorStop(1, '#FFB25B');
+  x.fillStyle = g; x.fillRect(0, 0, 640, 640);
+  const sg = x.createRadialGradient(cx, 340, 50, cx, 340, 170); sg.addColorStop(0, 'rgba(255,236,170,1)'); sg.addColorStop(0.45, 'rgba(255,224,138,.85)'); sg.addColorStop(1, 'rgba(255,224,138,0)');
+  x.fillStyle = sg; x.beginPath(); x.arc(cx, 340, 170, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#FFE7A3'; x.beginPath(); x.arc(cx, 340, 64, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#FFF6E5';
+  [[140, 150], [205, 108], [262, 175], [388, 120], [452, 168], [118, 238], [496, 248], [330, 92], [176, 205], [430, 222]].forEach(([sx, sy]) => { x.beginPath(); x.arc(sx, sy, 4, 0, Math.PI * 2); x.fill(); });
+  x.fillStyle = '#4B5D86'; x.beginPath(); x.moveTo(0, 530); x.lineTo(130, 372); x.lineTo(212, 444); x.lineTo(318, 318); x.lineTo(436, 452); x.lineTo(520, 392); x.lineTo(640, 520); x.lineTo(640, 640); x.lineTo(0, 640); x.closePath(); x.fill();
+  x.fillStyle = '#2E3A59'; x.beginPath(); x.moveTo(0, 590); x.lineTo(110, 478); x.lineTo(200, 548); x.lineTo(296, 462); x.lineTo(412, 566); x.lineTo(520, 506); x.lineTo(640, 600); x.lineTo(640, 640); x.lineTo(0, 640); x.closePath(); x.fill();
+  x.fillStyle = '#3E8E5A'; x.beginPath(); x.ellipse(392, 612, 250, 110, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#F4EDE1'; x.lineWidth = 3; x.beginPath(); x.moveTo(392, 503); x.lineTo(392, 352); x.stroke();
+  x.fillStyle = '#E63946'; x.beginPath(); x.moveTo(393, 352); x.lineTo(456, 368); x.lineTo(393, 386); x.closePath(); x.fill();
+  x.restore();
+  x.strokeStyle = '#F4EDE1'; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, R + 10, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = '#F4EDE1'; x.textBaseline = 'alphabetic';
+  let fs = 170; x.font = `900 ${fs}px Archivo, "Arial Black", Arial, sans-serif`;
+  const mw = x.measureText('RIDGELINE').width; fs = Math.min(170, fs * 735 / mw); x.font = `900 ${fs}px Archivo, "Arial Black", Arial, sans-serif`;
+  x.fillText('RIDGELINE', 612, 360);
+  x.fillRect(614, 382, 728, 3);
+  x.fillStyle = '#FFB25B'; x.font = '600 30px Archivo, Arial, sans-serif';
+  try { x.letterSpacing = '5px'; } catch (e) { /* older canvas */ }
+  x.fillText('GOLF CLUB · EST. 2026', 616, 428);
+  return { ...sourceFromDrawable(c, W, H, false), isVector: true, sample: true };
+}
+
+/* ---------------- analysis ---------------- */
+function analyze(src, o) {
+  const sw = src.w, sh = src.h, SN = sw * sh;
+  const sd = src.ctx.getImageData(0, 0, sw, sh).data;
+  let semi = 0; for (let i = 0; i < SN; i++) if (sd[i * 4 + 3] < 250) semi++;
+  const alphaMode = semi > SN * 0.005;
+  const tmp = new Float32Array(3), tmp2 = new Float32Array(3);
+  let bgLab = null, bgRGB = null;
+  if (!alphaMode) {
+    const bins = new Map(), pts = [];
+    const add = (x, y) => { const p = (y * sw + x) * 4; pts.push(p); const key = (sd[p] >> 4) << 8 | (sd[p + 1] >> 4) << 4 | (sd[p + 2] >> 4); let e = bins.get(key); if (!e) { e = { n: 0, r: 0, g: 0, b: 0 }; bins.set(key, e); } e.n++; e.r += sd[p]; e.g += sd[p + 1]; e.b += sd[p + 2]; };
+    for (let x = 0; x < sw; x++) { add(x, 0); add(x, sh - 1); if (sh > 6) { add(x, 1); add(x, sh - 2); } }
+    for (let y = 2; y < sh - 2; y++) { add(0, y); add(sw - 1, y); if (sw > 6) { add(1, y); add(sw - 2, y); } }
+    let best = null; for (const e of bins.values()) if (!best || e.n > best.n) best = e;
+    if (best) {
+      const rgb = [Math.round(best.r / best.n), Math.round(best.g / best.n), Math.round(best.b / best.n)], lab = labOfRgb(rgb);
+      let near = 0; for (const p of pts) { rgb2lab(sd[p], sd[p + 1], sd[p + 2], tmp, 0); if (dE(tmp, lab) < 12) near++; }
+      if (near / pts.length >= 0.6) { bgLab = lab; bgRGB = rgb; }
+    }
+  }
+  const knock = !!(bgLab && o.knockout);
+  let bx0 = sw, by0 = sh, bx1 = -1, by1 = -1, nfg = 0;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+    const p = (y * sw + x) * 4; if (sd[p + 3] < 128) continue;
+    if (knock) { rgb2lab(sd[p], sd[p + 1], sd[p + 2], tmp, 0); if (dE(tmp, bgLab) <= 14) continue; }
+    nfg++; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y;
+  }
+  if (nfg < 20) return { error: 'No artwork found in this file. If it is a light design on a white background, try turning off “Leave unstitched”.' };
+
+  /* fit the artwork into the placement box at real size */
+  const boxWmm = o.boxW * 25.4, boxHmm = o.boxH * 25.4;
+  const ppm = clamp(Math.sqrt(700000 / (boxWmm * boxHmm)), 2.5, 8);
+  const W = Math.max(40, Math.round(boxWmm * ppm)), H = Math.max(40, Math.round(boxHmm * ppm)), N = W * H;
+  const inset = 3, bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
+  const sc = Math.min((W - 2 * inset) / bw, (H - 2 * inset) / bh);
+  const dw = bw * sc, dh = bh * sc, ox = (W - dw) / 2, oy = (H - dh) / 2;
+  const gc = document.createElement('canvas'); gc.width = W; gc.height = H;
+  const gx = gc.getContext('2d', { willReadFrequently: true });
+  gx.imageSmoothingEnabled = true; gx.imageSmoothingQuality = 'high';
+  gx.drawImage(src.canvas, bx0, by0, bw, bh, ox, oy, dw, dh);
+  const gd = gx.getImageData(0, 0, W, H).data;
+  const designWin = dw / ppm / 25.4, designHin = dh / ppm / 25.4;
+  const dpi = (bw / src.scaleFromOrig) / designWin;
+
+  const lab = new Float32Array(N * 3), has = new Uint8Array(N), fg = new Uint8Array(N);
+  let fgCount = 0;
+  for (let i = 0; i < N; i++) {
+    const p = i * 4; if (gd[p + 3] < 128) continue;
+    has[i] = 1; rgb2lab(gd[p], gd[p + 1], gd[p + 2], lab, i * 3);
+    if (!knock || dEi(lab, i * 3, bgLab, 0) > 14) { fg[i] = 1; fgCount++; }
+  }
+  if (fgCount < 20) return { error: 'The artwork is too small to measure at this size.' };
+
+  /* strong edges + edge zone (anti-aliasing / blur band) */
+  const edge = new Uint8Array(N);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (x < W - 1) { const j = i + 1; if (fg[i] !== fg[j] || (fg[i] && dEi(lab, i * 3, lab, j * 3) > 10)) { edge[i] = 1; edge[j] = 1; } }
+    if (y < H - 1) { const j = i + W; if (fg[i] !== fg[j] || (fg[i] && dEi(lab, i * 3, lab, j * 3) > 10)) { edge[i] = 1; edge[j] = 1; } }
+  }
+  const De = edt(edge, W, H);
+  const ez = clamp(Math.ceil(1.3 * sc) + 1, 2, 8);
+
+  /* gradient / shading detection: smooth colour ramps away from edges */
+  const blur = new Float32Array(N * 3);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x; if (!fg[i]) continue;
+    let a = 0, b = 0, c = 0, n = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = i + dy * W + dx; if (!fg[q]) continue; a += lab[q * 3]; b += lab[q * 3 + 1]; c += lab[q * 3 + 2]; n++; }
+    blur[i * 3] = a / n; blur[i * 3 + 1] = b / n; blur[i * 3 + 2] = c / n;
+  }
+  const dG = clamp(Math.round(ppm), 4, 10);
+  const gradPix = new Uint8Array(N); let measured = 0, gradN = 0;
+  for (let y = dG; y < H - dG; y++) for (let x = dG; x < W - dG; x++) {
+    const i = y * W + x; if (!fg[i] || De[i] <= dG + 1) continue;
+    measured++;
+    const h = dEi(blur, (i - dG) * 3, blur, (i + dG) * 3), v = dEi(blur, (i - dG * W) * 3, blur, (i + dG * W) * 3);
+    const r = h > v ? h : v;
+    if (r > 2.8 && r < 45) { gradPix[i] = 1; gradN++; }
+  }
+  const gradFrac = measured > 300 ? gradN / measured : 0;
+  let gradOverlay = new Uint8Array(N);
+  if (gradN) { const Dg = edt(gradPix, W, H); for (let i = 0; i < N; i++) if (fg[i] && Dg[i] <= dG + 1) gradOverlay[i] = 1; }
+
+  /* colour sampling from flat interiors */
+  let interiorCount = 0; for (let i = 0; i < N; i++) if (fg[i] && De[i] > ez) interiorCount++;
+  const useInterior = interiorCount >= 300;
+  const pool = useInterior ? interiorCount : fgCount;
+  const stride = Math.max(1, Math.ceil(pool / 40000));
+  const samp = []; let ctr = 0;
+  for (let i = 0; i < N; i++) { if (!fg[i] || (useInterior && De[i] <= ez)) continue; if (ctr++ % stride === 0) samp.push(i); }
+  const ns = samp.length, sdat = new Float32Array(ns * 3);
+  for (let s = 0; s < ns; s++) { const i = samp[s]; sdat[s * 3] = lab[i * 3]; sdat[s * 3 + 1] = lab[i * 3 + 1]; sdat[s * 3 + 2] = lab[i * 3 + 2]; }
+  const rng = mulberry32(1234);
+  const km16 = kmeansPP(sdat, ns, Math.min(16, ns), rng);
+  const merged = [];
+  const order = [...Array(km16.K).keys()].filter(k => km16.cnt[k] > 0).sort((a, b) => km16.cnt[b] - km16.cnt[a]);
+  for (const k of order) {
+    const c = [km16.C[k * 3], km16.C[k * 3 + 1], km16.C[k * 3 + 2]], n = km16.cnt[k];
+    const m = merged.find(e => dE(e.lab, c) < 9);
+    if (m) { const t = m.n + n; for (let j = 0; j < 3; j++) m.lab[j] = (m.lab[j] * m.n + c[j] * n) / t; m.n = t; }
+    else merged.push({ lab: c, n });
+  }
+  const sig = merged.filter(e => e.n >= 0.006 * ns);
+  const effective = Math.max(1, sig.length);
+  const K = clamp(Math.min(o.maxColors, effective), 1, 15);
+  /* pick K seeds: big clusters first, then the most distinct */
+  const chosen = [sig[0] || merged[0]];
+  while (chosen.length < K) {
+    let best = null, bs = -1;
+    for (const e of sig) { if (chosen.includes(e)) continue; let md = Infinity; for (const c of chosen) md = Math.min(md, dE(e.lab, c.lab)); const sc2 = md * Math.pow(e.n / ns, 0.35); if (sc2 > bs) { bs = sc2; best = e; } }
+    if (!best) break; chosen.push(best);
+  }
+  const KK = chosen.length, C = new Float32Array(KK * 3);
+  chosen.forEach((e, k) => { C[k * 3] = e.lab[0]; C[k * 3 + 1] = e.lab[1]; C[k * 3 + 2] = e.lab[2]; });
+  lloyd(sdat, ns, C, KK, 12);
+
+  /* assign labels; anti-aliased blend pixels take the side they blend from, never a third colour */
+  const L0 = new Int16Array(N).fill(-1);
+  const nearestC = (o3) => { let b = 0, bd = Infinity; for (let k = 0; k < KK; k++) { const a = lab[o3] - C[k * 3], bb = lab[o3 + 1] - C[k * 3 + 1], c = lab[o3 + 2] - C[k * 3 + 2]; const d = a * a + bb * bb + c * c; if (d < bd) { bd = d; b = k; } } return b; };
+  const blendA = new Int32Array(N).fill(-1), blendB = new Int32Array(N).fill(-1);
+  const dmax = clamp(Math.ceil(sc) + 1, 1, 4);
+  const dirs = [1, 0, 0, 1, 1, 1, 1, -1];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (!fg[i]) continue;
+    if (De[i] > ez) { L0[i] = nearestC(i * 3); continue; }
+    let found = false, bestE = 0;
+    for (let di = 0; di < 8 && !found; di += 2) {
+      const ddx = dirs[di], ddy = dirs[di + 1];
+      for (let d = 1; d <= dmax; d++) {
+        const ax = x - ddx * d, ay = y - ddy * d, bx = x + ddx * d, by = y + ddy * d;
+        if (ax < 0 || ay < 0 || bx < 0 || by < 0 || ax >= W || bx >= W || ay >= H || by >= H) break;
+        const a = ay * W + ax, b = by * W + bx;
+        if (!has[a] || !has[b]) break;
+        const eab = dEi(lab, a * 3, lab, b * 3); if (eab < 18) continue;
+        const ea = dEi(lab, a * 3, lab, i * 3), eb = dEi(lab, i * 3, lab, b * 3);
+        if (ea > 4 && eb > 4 && ea + eb <= 1.12 * eab && eab > bestE) { bestE = eab; blendA[i] = a; blendB[i] = b; found = true; break; }
+      }
+    }
+    if (!found) L0[i] = nearestC(i * 3);
+  }
+  for (let i = 0; i < N; i++) {
+    if (blendA[i] < 0 || !fg[i]) continue;
+    let best = -1, bd = Infinity;
+    for (const e of [blendA[i], blendB[i]]) {
+      let lbl, col;
+      if (!fg[e]) { lbl = -1; col = lab.subarray(e * 3, e * 3 + 3); }
+      else { lbl = L0[e] >= 0 ? L0[e] : nearestC(e * 3); col = C.subarray(lbl * 3, lbl * 3 + 3); }
+      const d = dEi(lab, i * 3, col, 0); if (d < bd) { bd = d; best = lbl; }
+    }
+    L0[i] = best;
+  }
+  let L1 = despeckle(L0, W, H);
+  /* drop pixel-noise components */
+  const noiseMin = Math.max(5, Math.round(0.06 * ppm * ppm));
+  {
+    const cc = components(L1, W, H, 0);
+    const kill = new Uint8Array(cc.comps.length); let any = false;
+    cc.comps.forEach((c, k) => { if (c.area < noiseMin) { kill[k] = 1; any = true; } });
+    if (any) { for (let i = 0; i < N; i++) if (L1[i] >= 0 && kill[cc.id[i]]) L1[i] = -2; fillHoles(L1, W, H, true); }
+  }
+
+  /* per-thread geometry on the faithful (quantized) art */
+  const Dl = new Float32Array(N), thinRaw = new Uint8Array(N);
+  const m = new Uint8Array(N), nm = new Uint8Array(N);
+  const rLine = RULE.line / 2 * ppm - 0.5;
+  for (let c = 0; c < KK; c++) {
+    let any = false;
+    for (let i = 0; i < N; i++) { const b = L1[i] === c; m[i] = b ? 1 : 0; nm[i] = b ? 0 : 1; if (b) any = true; }
+    if (!any) continue;
+    const D = edt(nm, W, H);
+    for (let i = 0; i < N; i++) if (m[i]) Dl[i] = D[i];
+    const op = openMask(m, D, W, H, rLine);
+    for (let i = 0; i < N; i++) if (m[i] && !op[i]) thinRaw[i] = 1;
+  }
+  let fg1 = 0; for (let i = 0; i < N; i++) if (L1[i] >= 0) fg1++;
+
+  /* components, text lines, tiny details */
+  const CC = components(L1, W, H, 0, Dl);
+  const isText = new Uint8Array(CC.comps.length);
+  const cands = [];
+  CC.comps.forEach((c, k) => {
+    const hmm = (c.maxy - c.miny + 1) / ppm, wmm = (c.maxx - c.minx + 1) / ppm, ar = wmm / hmm, fill = c.area / ((c.maxx - c.minx + 1) * (c.maxy - c.miny + 1));
+    const strokeRatio = Math.max(1, 2 * c.maxE - 1) / (c.maxy - c.miny + 1);
+    if (c.area >= 6 && hmm >= 0.8 && hmm <= 25 && ar >= 0.08 && ar <= 1.7 && fill >= 0.08 && fill <= 0.92 && strokeRatio <= 0.42) cands.push(k);
+  });
+  cands.sort((a, b) => CC.comps[a].minx - CC.comps[b].minx);
+  const par = new Int32Array(CC.comps.length).fill(-1);
+  const find = a => { while (par[a] >= 0 && par[a] !== a) a = par[a]; return a; };
+  cands.forEach(k => { par[k] = k; });
+  for (let a = 0; a < cands.length; a++) {
+    const A = CC.comps[cands[a]], hA = A.maxy - A.miny + 1;
+    for (let b = a + 1; b < cands.length; b++) {
+      const B = CC.comps[cands[b]], hB = B.maxy - B.miny + 1, Hm = Math.max(hA, hB);
+      if (B.minx - A.maxx > 1.8 * Hm) { if (B.minx - A.maxx > 4 * hA) break; continue; }
+      const ratio = Math.min(hA, hB) / Hm; if (ratio < 0.4) continue;
+      const gap = B.minx - A.maxx; if (gap < -0.3 * Hm || gap > 1.8 * Hm) continue;
+      const bottomOk = Math.abs(A.maxy - B.maxy) <= 0.3 * Hm, centerOk = Math.abs((A.miny + A.maxy) - (B.miny + B.maxy)) / 2 <= 0.25 * Hm;
+      if (!bottomOk && !centerOk) continue;
+      const ra = find(cands[a]), rb = find(cands[b]); if (ra !== rb) par[rb] = ra;
+    }
+  }
+  const groups = new Map();
+  cands.forEach(k => { const r = find(k); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(k); });
+  const textLines = [];
+  for (const mem of groups.values()) {
+    if (mem.length < 3) continue;
+    let minx = W, maxx = 0, miny = H, maxy = 0, hmax = 0; const strokes = [];
+    mem.forEach(k => { const c = CC.comps[k]; isText[k] = 1; minx = Math.min(minx, c.minx); maxx = Math.max(maxx, c.maxx); miny = Math.min(miny, c.miny); maxy = Math.max(maxy, c.maxy); hmax = Math.max(hmax, c.maxy - c.miny + 1); strokes.push(Math.max(1, 2 * c.maxE - 1) / ppm); });
+    strokes.sort((a, b) => a - b);
+    textLines.push({ minx, maxx, miny, maxy, hmm: hmax / ppm, stroke: strokes[strokes.length >> 1], n: mem.length });
+  }
+  textLines.sort((a, b) => a.hmm - b.hmm);
+  const tiny = [];
+  CC.comps.forEach((c, k) => {
+    if (c.label < 0 || isText[k]) return;
+    const amm = c.area / (ppm * ppm), side = Math.max(c.maxx - c.minx + 1, c.maxy - c.miny + 1) / ppm;
+    if (amm < RULE.tiny && side < 3.2) tiny.push({ k, cx: c.cx, cy: c.cy, r: Math.max(c.maxx - c.minx, c.maxy - c.miny) / 2 + 2, amm, dia: Math.max(c.maxx - c.minx + 1, c.maxy - c.miny + 1) / ppm });
+  });
+
+  const tinyComp = new Set(tiny.map(t => t.k));
+  /* thin features (ignoring sharp-corner tips) */
+  const TC = components(thinRaw, W, H, 1, Dl);
+  const thinKeep = new Uint8Array(TC.comps.length), thinList = [];
+  const thinSig = new Uint8Array(N), thinRep = new Uint8Array(N);
+  TC.comps.forEach((c, k) => {
+    const wpx = Math.max(1, 2 * c.maxE - 1), len = c.area / (wpx * ppm);
+    if (len < 2) return;
+    thinKeep[k] = 1;
+    const textOwned = isText[CC.id[c.first]] === 1;
+    const tinyOwned = tinyComp.has(CC.id[c.first]);
+    thinList.push({ k, wmm: wpx / ppm, len, label: L1[c.first], text: textOwned, tiny: tinyOwned, cx: c.cx, cy: c.cy, minx: c.minx, maxx: c.maxx, rAdd: Math.max(0.5, (RULE.line * ppm - wpx) / 2 + 0.5) });
+  });
+  const rAddPx = new Float32Array(N);
+  const thinByK = new Map(thinList.map(t => [t.k, t]));
+  for (let i = 0; i < N; i++) {
+    if (!thinRaw[i]) continue; const k = TC.id[i]; if (!thinKeep[k]) continue;
+    const t = thinByK.get(k); thinSig[i] = 1; rAddPx[i] = t.rAdd; if (!t.text && !t.tiny) thinRep[i] = 1;
+  }
+  const thinReport = thinList.filter(t => !t.text && !t.tiny);
+  let thinRepCount = 0; for (let i = 0; i < N; i++) if (thinRep[i]) thinRepCount++;
+
+  /* narrow gaps of open fabric between stitched elements */
+  const fab = new Uint8Array(N), notFab = new Uint8Array(N);
+  for (let i = 0; i < N; i++) { if (L1[i] < 0) fab[i] = 1; else notFab[i] = 1; }
+  const DF = edt(notFab, W, H);
+  const opF = openMask(fab, DF, W, H, RULE.gap / 2 * ppm - 0.5);
+  const gapRaw = new Uint8Array(N); for (let i = 0; i < N; i++) if (fab[i] && !opF[i]) gapRaw[i] = 1;
+  const GC = components(gapRaw, W, H, 1, DF);
+  const gapSig = new Uint8Array(N), gapList = [], gapKeep = new Uint8Array(GC.comps.length);
+  GC.comps.forEach((c, k) => { if (c.touch) return; const wpx = Math.max(1, 2 * c.maxE - 1), len = c.area / (wpx * ppm); if (len < 2) return; gapKeep[k] = 1; gapList.push({ wmm: wpx / ppm, len }); });
+  for (let i = 0; i < N; i++) if (gapRaw[i] && gapKeep[GC.id[i]]) gapSig[i] = 1;
+
+  /* seam */
+  const seamInfo = { thin: 0, text: 0, crosses: false };
+  if (o.seam) {
+    const cx = W * (o.seamU == null ? 0.5 : o.seamU), half = 1.5 * ppm;
+    for (let y = 0; y < H; y++) for (let x = Math.max(0, Math.floor(cx - half)); x <= Math.min(W - 1, Math.ceil(cx + half)); x++) { const i = y * W + x; if (L1[i] >= 0) seamInfo.crosses = true; if (thinSig[i]) seamInfo.thin++; }
+    textLines.forEach(t => { if (t.minx < cx && t.maxx > cx && t.hmm < RULE.text) seamInfo.text++; });
+  }
+  const threadIdx = [], centroidLab = [];
+  for (let k = 0; k < KK; k++) { const l = [C[k * 3], C[k * 3 + 1], C[k * 3 + 2]]; centroidLab.push(l); threadIdx.push(nearestThread(l)); }
+  return {
+    W, H, ppm, N, gc, gd, L1, K: KK, centroidLab, threadIdx, CC, isText,
+    alphaMode, bgLab, bgRGB, knock, filledBg: !alphaMode && (!bgLab || !o.knockout),
+    designWin, designHin, boxW: o.boxW, boxH: o.boxH, ext: { x0: ox / ppm / 25.4, x1: (ox + dw) / ppm / 25.4, y0: oy / ppm / 25.4, y1: (oy + dh) / ppm / 25.4 },
+    dpi, isVector: src.isVector, srcW: src.origW, srcH: src.origH, sc,
+    effective, gradFrac, gradOverlay, fg1,
+    thinReport, thinRep, thinRepCount, thinSig, thinList, textLines, tiny, gapList, gapSig, seamInfo,
+    seam: !!o.seam, seamU: o.seamU == null ? 0.5 : o.seamU, seamName: o.seamName || 'center', soft: !!o.soft, large: !!o.large
+  };
+}
+
+/* ---------------- simplification (reruns alone when line, smoothing or detail options change) ---------------- */
+/* Expand every stroke of each thread that is narrower than `target` mm, centred on the stroke. */
+function expandThin(R, L2, target, m, nm) {
+  const { W, H, N, ppm, K } = R; let n = 0;
+  const rT = target / 2 * ppm - 0.5, tPx = target * ppm;
+  for (let c = 0; c < K; c++) {
+    let any = false;
+    for (let i = 0; i < N; i++) { const b = L2[i] === c; m[i] = b ? 1 : 0; nm[i] = b ? 0 : 1; if (b) any = true; }
+    if (!any) continue;
+    const D = edt(nm, W, H);
+    const op = openMask(m, D, W, H, rT);
+    const T = new Uint8Array(N); let anyT = false;
+    for (let i = 0; i < N; i++) if (m[i] && !op[i]) { T[i] = 1; anyT = true; }
+    if (!anyT) continue;
+    const TC = components(T, W, H, 1, D);
+    const add = new Float32Array(TC.comps.length); let kept = 0;
+    TC.comps.forEach((cc, k) => { const wpx = Math.max(1, 2 * cc.maxE - 1), len = cc.area / (wpx * ppm); if (len >= 2 && wpx < tPx - 0.5) { add[k] = (tPx - wpx) / 2 + 0.5; kept++; } });
+    if (!kept) continue;
+    const T2 = new Uint8Array(N), rA = new Float32Array(N);
+    for (let i = 0; i < N; i++) if (T[i] && add[TC.id[i]] > 0) { T2[i] = 1; rA[i] = add[TC.id[i]]; }
+    const r = edt(T2, W, H, true);
+    for (let i = 0; i < N; i++) if (r.dist[i] <= rA[r.idx[i]]) L2[i] = c;
+    n += kept;
+  }
+  return n;
+}
+/* Smooth jagged outlines: blur each thread's signed distance field and keep the strongest. Straight edges stay put, stair-steps and nicks round off, specks shrink away. */
+function smoothLabels(R, L2, strength, m, nm) {
+  const { W, H, N, ppm, K } = R;
+  const r = Math.max(1, Math.round([0, 0.25, 0.45, 0.7][strength] * ppm));
+  const best = new Float32Array(N).fill(-1e9), bestL = new Int16Array(N).fill(-1);
+  for (let c = -1; c < K; c++) {
+    let any = false;
+    for (let i = 0; i < N; i++) { const b = L2[i] === c; m[i] = b ? 1 : 0; nm[i] = b ? 0 : 1; if (b) any = true; }
+    if (!any) continue;
+    const Din = edt(nm, W, H), Dout = edt(m, W, H);
+    const sdf = new Float32Array(N);
+    for (let i = 0; i < N; i++) sdf[i] = m[i] ? Math.min(Din[i], 60) - 0.5 : 0.5 - Math.min(Dout[i], 60);
+    const sm = boxBlur(boxBlur(sdf, W, H, r), W, H, r);
+    for (let i = 0; i < N; i++) if (sm[i] > best[i]) { best[i] = sm[i]; bestL[i] = c; }
+  }
+  L2.set(bestL);
+}
+function simplify(R, p) {
+  const { W, H, N, ppm, K: KK, L1, CC, isText } = R;
+  const m = new Uint8Array(N), nm = new Uint8Array(N);
+  const L2 = L1.slice();
+  const tinyThr = [RULE.tiny, RULE.tiny, 4, 6][p.smooth] || RULE.tiny;
+  let removedTiny = 0, filledHoles = 0;
+  {
+    const kill = new Uint8Array(CC.comps.length);
+    const maxSide = 2 * Math.sqrt(tinyThr);
+    CC.comps.forEach((c, k) => { if (!isText[k] && c.area / (ppm * ppm) < tinyThr && Math.max(c.maxx - c.minx + 1, c.maxy - c.miny + 1) / ppm < maxSide) { kill[k] = 1; removedTiny++; } });
+    if (removedTiny) { for (let i = 0; i < N; i++) if (L1[i] >= 0 && kill[CC.id[i]]) L2[i] = -2; fillHoles(L2, W, H, true); }
+  }
+  if (p.smooth >= 2) {
+    const fm = new Uint8Array(N); for (let i = 0; i < N; i++) fm[i] = L2[i] === -1 ? 1 : 0;
+    const FC = components(fm, W, H, 1);
+    const kill = new Uint8Array(FC.comps.length);
+    FC.comps.forEach((c, k) => {
+      if (c.touch || c.area / (ppm * ppm) >= tinyThr || Math.max(c.maxx - c.minx + 1, c.maxy - c.miny + 1) / ppm >= 2 * Math.sqrt(tinyThr)) return;
+      if (R.textLines.some(t => c.cx >= t.minx && c.cx <= t.maxx && c.cy >= t.miny && c.cy <= t.maxy)) return;
+      kill[k] = 1; filledHoles++;
+    });
+    if (filledHoles) { for (let i = 0; i < N; i++) if (fm[i] && kill[FC.id[i]]) L2[i] = -2; fillHoles(L2, W, H, false); }
+  }
+  const target = Math.round(Math.max(1.3, p.target) * 10) / 10;
+  let expanded = 0, removedThin = 0;
+  if (p.thin === 'expand') expanded = expandThin(R, L2, target, m, nm);
+  else if (p.thin === 'remove') {
+    let any = false;
+    for (let i = 0; i < N; i++) if (R.thinSig[i] && L2[i] >= 0 && L2[i] === L1[i]) { L2[i] = -2; any = true; }
+    if (any) { fillHoles(L2, W, H, true); removedThin = R.thinList.length; }
+  }
+  let filledGaps = 0;
+  { let any = false; for (let i = 0; i < N; i++) if (R.gapSig[i] && L2[i] === -1) { L2[i] = -2; any = true; } if (any) { fillHoles(L2, W, H, false); filledGaps = R.gapList.length; } }
+  if (p.smooth > 0) {
+    const before = p.thin === 'leave' ? L2.slice() : null;
+    smoothLabels(R, L2, p.smooth, m, nm);
+    if (p.thin === 'expand') expandThin(R, L2, target, m, nm);
+    else if (before) { for (let i = 0; i < N; i++) if (R.thinSig[i] && before[i] >= 0) L2[i] = before[i]; }
+  }
+  const L2f = despeckle(L2, W, H);
+
+  /* stitch types and puff fit on the simplified art */
+  const D2 = new Float32Array(N), type = new Uint8Array(N);
+  const counts = new Float64Array(KK);
+  let fillPx = 0, satinPx = 0;
+  for (let c = 0; c < KK; c++) {
+    let any = false;
+    for (let i = 0; i < N; i++) { const b = L2f[i] === c; m[i] = b ? 1 : 0; nm[i] = b ? 0 : 1; if (b) { any = true; counts[c]++; } }
+    if (!any) continue;
+    const D = edt(nm, W, H);
+    const wide = openMask(m, D, W, H, RULE.satinMax / 2 * ppm);
+    for (let i = 0; i < N; i++) {
+      if (!m[i]) continue;
+      D2[i] = D[i];
+      if (wide[i]) { type[i] = 1; fillPx++; } else { type[i] = 2; satinPx++; }
+    }
+  }
+  const CC2 = components(L2f, W, H, 0);
+  const fillAng = new Float32Array(CC2.comps.length);
+  CC2.comps.forEach((c, k) => { fillAng[k] = 0.5 * Math.atan2(2 * c.vxy, c.vxx - c.vyy) + Math.PI / 4; });
+  Object.assign(R, {
+    L2: L2f, D2, type, puffOk: null, puffWide: null, puffFit: null, counts, fillPx, satinPx, fg2: fillPx + satinPx, CC2, compId2: CC2.id, fillAng,
+    simp: { thin: p.thin, target, smooth: p.smooth, removedTiny, expanded, removedThin, filledGaps, filledHoles }, _ps: null, _prob: null, _probKey: null
+  });
+  prepStitch(R);
+}
+/* Where strokes fit 3D puff (0.2–0.5 in). Only computed once puff or mix is in use. */
+function ensurePuff(R) {
+  if (R.puffOk) return;
+  const { W, H, N, ppm, K, L2, D2 } = R;
+  const m = new Uint8Array(N), puffOk = new Uint8Array(N), puffWide = new Uint8Array(N), ok = new Float64Array(K);
+  for (let c = 0; c < K; c++) {
+    if (!R.counts[c]) continue;
+    for (let i = 0; i < N; i++) m[i] = L2[i] === c ? 1 : 0;
+    const pOk = openMask(m, D2, W, H, RULE.puffMin / 2 * ppm - 0.5), pWide = openMask(m, D2, W, H, RULE.puffMax / 2 * ppm);
+    for (let i = 0; i < N; i++) { if (!m[i]) continue; if (pOk[i]) puffOk[i] = 1; if (pWide[i]) puffWide[i] = 1; if (pOk[i] && !pWide[i]) ok[c]++; }
+  }
+  R.puffOk = puffOk; R.puffWide = puffWide;
+  R.puffFit = []; for (let c = 0; c < K; c++) R.puffFit[c] = R.counts[c] > 0 && ok[c] / R.counts[c] >= 0.6;
+}
+
+/* ---------------- thread rendering ---------------- */
+function prepStitch(R) {
+  const { W, H, N, L2, D2, type, puff, ppm, compId2, fillAng } = R;
+  const gxA = new Float32Array(N), gyA = new Float32Array(N);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, l = L2[i]; if (l < 0) continue;
+    const d0 = D2[i];
+    const dl = x > 0 && L2[i - 1] === l ? D2[i - 1] : d0, dr = x < W - 1 && L2[i + 1] === l ? D2[i + 1] : d0;
+    const du = y > 0 && L2[i - W] === l ? D2[i - W] : d0, dd = y < H - 1 && L2[i + W] === l ? D2[i + W] : d0;
+    gxA[i] = (dr - dl) * 0.5; gyA[i] = (dd - du) * 0.5;
+  }
+  const jxx = new Float32Array(N), jxy = new Float32Array(N), jyy = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const a = gxA[i], b = gyA[i]; jxx[i] = a * a; jxy[i] = a * b; jyy[i] = b * b; }
+  const rb = Math.max(1, Math.round(0.3 * ppm));
+  const bxx = boxBlur(jxx, W, H, rb), bxy = boxBlur(jxy, W, H, rb), byy = boxBlur(jyy, W, H, rb);
+  const ox = new Float32Array(N), oy = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    if (L2[i] < 0) continue;
+    let a;
+    if (type[i] === 1) a = fillAng[compId2[i]];
+    else a = (bxx[i] + byy[i] < 1e-6) ? 0 : 0.5 * Math.atan2(2 * bxy[i], bxx[i] - byy[i]);
+    ox[i] = Math.cos(a); oy[i] = Math.sin(a);
+  }
+  const rng = mulberry32(99);
+  const nzF = new Float32Array(N); for (let i = 0; i < N; i++) nzF[i] = rng();
+  const cw = (W >> 1) + 1, coarse = new Float32Array(cw * ((H >> 1) + 1)); for (let i = 0; i < coarse.length; i++) coarse[i] = rng();
+  const nzC = new Float32Array(N); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) nzC[y * W + x] = coarse[(y >> 1) * cw + (x >> 1)];
+  const Lfill = clamp(Math.round(1.1 * ppm), 3, 10), Lsat = clamp(Math.round(1.6 * ppm), 4, 16);
+  const F = new Float32Array(N), Sp = new Float32Array(N), LIT = new Float32Array(N);
+  const la = -0.9, rowPx = Math.max(2, 0.45 * ppm), stLen = Math.max(8, 3.2 * ppm);
+  for (let i = 0; i < N; i++) {
+    const l = L2[i]; if (l < 0) continue;
+    const isFill = type[i] === 1, nz = isFill ? nzF : nzC, Lm = isFill ? Lfill : Lsat;
+    const px = i % W, py = (i - px) / W;
+    let s = nz[i], n = 1;
+    for (let sg = 1; sg >= -1; sg -= 2) {
+      let x = px + 0.5, y = py + 0.5, vx = ox[i] * sg, vy = oy[i] * sg;
+      for (let k = 0; k < Lm; k++) {
+        x += vx; y += vy; const ix = x | 0, iy = y | 0;
+        if (x < 0 || y < 0 || ix >= W || iy >= H) break;
+        const q = iy * W + ix; if (L2[q] !== l) break;
+        s += nz[q]; n++;
+        if (!isFill) { let nx = ox[q], ny = oy[q]; if (nx * vx + ny * vy < 0) { nx = -nx; ny = -ny; } vx = nx; vy = ny; }
+      }
+    }
+    const t = clamp(0.5 + (s / n - 0.5) * Math.sqrt(n) * 0.9, 0, 1);
+    const ang = Math.atan2(oy[i], ox[i]), sheen = 0.5 + 0.5 * Math.cos(2 * (ang - la));
+    const d = D2[i], edgeF = 0.58 + 0.42 * Math.sqrt(Math.min(1, d / (0.5 * ppm)));
+    let f = (0.87 + 0.26 * t) * edgeF * (0.85 + 0.24 * sheen);
+    if (isFill) {
+      const u = (px * ox[i] + py * oy[i]) / stLen, v = (-px * oy[i] + py * ox[i]) / rowPx;
+      const row = Math.floor(v), fv = v - row; let ph = u + row * 0.37; ph -= Math.floor(ph);
+      if (ph < 0.06) f *= 0.72; if (fv < 0.2) f *= 0.9;
+    }
+    const gl = Math.hypot(gxA[i], gyA[i]) || 1;
+    LIT[i] = (0.6 * gxA[i] + 0.8 * gyA[i]) / gl;
+    F[i] = f; Sp[i] = Math.pow(sheen, 5) * t * Math.min(1, edgeF + 0.1);
+  }
+  /* fabric: twill weave, embroidery shadow, cap seam */
+  const fgM = new Float32Array(N); for (let i = 0; i < N; i++) fgM[i] = L2[i] >= 0 ? 1 : 0;
+  const off = 0.22 * ppm, rbs = Math.max(1, Math.round(0.3 * ppm));
+  const shd = boxBlur(boxBlur(fgM, W, H, rbs), W, H, rbs);
+  const FF = new Float32Array(N), SH1 = new Float32Array(N), k1 = 2 * Math.PI / Math.max(3, 0.75 * ppm), k2 = 2 * Math.PI / Math.max(2.5, 0.4 * ppm);
+  const scx = W * R.seamU;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (L2[i] >= 0) continue;
+    const sx = clamp(Math.round(x - off), 0, W - 1), sy = clamp(Math.round(y - off * 1.3), 0, H - 1);
+    let f = 0.93 + 0.045 * Math.sin((x * 0.9 + y) * k1) + 0.02 * Math.sin((x - y) * k2) + 0.05 * (nzF[i] - 0.5);
+    SH1[i] = shd[sy * W + sx];
+    if (R.seam) {
+      const dx = Math.abs(x + 0.5 - scx);
+      if (dx < 0.28 * ppm) f *= 0.62; else if (dx < 0.7 * ppm) f *= 0.86;
+      const ts = Math.abs(dx - 1.8 * ppm);
+      if (ts < Math.max(0.6, 0.22 * ppm) && ((y / ppm) % 2.4) < 1.6) f *= 1.2;
+    }
+    FF[i] = f;
+  }
+  R.F0 = F; R.Sp0 = Sp; R.LIT = LIT; R.TW = FF; R.SH1 = SH1;
+}
+
+/* ---------------- state ---------------- */
+const S = {
+  src: null, srcName: '', zone: null, zoneInfo: null, upload: null, placement: DEFAULT_PLACE, boxW: PLACEMENTS.find(p => p.id === DEFAULT_PLACE).w, boxH: PLACEMENTS.find(p => p.id === DEFAULT_PLACE).h, technique: 'flat', maxColors: 6, thin: 'expand', lineTarget: 1.3, smooth: 1, knockout: true, puffLabel: {}, puffPts: [],
+  fabric: 'hat', view: 'stitched', R: null, threadOverride: {}, token: 0, ev: null, reviewMeta: null
+};
+function placement() { return placementList().find(p => p.id === S.placement) || PLACEMENTS[0]; }
+function threadFor(k) { const o = S.threadOverride[k]; return THREADS[o != null ? o : S.R.threadIdx[k]]; }
+function usedLabels() { const R = S.R; const out = []; for (let k = 0; k < R.K; k++) if (R.counts[k] > 0) out.push(k); return out; }
+function fabric() {
+  if (S.fabric === 'hat' && HAT) return HAT;
+  { const f = FABRICS.find(q => q.id === S.fabric); if (f) return f; }
+  const R = S.R; if (!R) return FABRICS[1];
+  if (R.bgLab) { let b = FABRICS[0], bd = Infinity; for (const f of FABRICS) { const d = dE(f.lab, R.bgLab); if (d < bd) { bd = d; b = f; } } return b; }
+  const labs = usedLabels().map(k => threadFor(k).lab);
+  let best = FABRICS[1], bs = -1;
+  const pref = { black: 1.15, navy: 1.12, white: 1.1, khaki: 1.06, stone: 1.06, heather: 1.02, charcoal: 1.02 };
+  for (const f of FABRICS) { let md = Infinity; for (const l of labs) md = Math.min(md, dE(f.lab, l)); md *= pref[f.id] || 0.92; if (md > bs) { bs = md; best = f; } }
+  return best;
+}
+
+/* Which elements are 3D puff: whole threads in Puff mode; per thread plus clicked elements in Mix mode. */
+function puffState() {
+  const R = S.R;
+  if (!R || !R.L2 || S.technique === 'flat') return { key: 'flat', des: null, raised: null, nDes: 0, nRaised: 0, nThin: 0, nWide: 0, labels: [], minGapMm: Infinity, compDes: null, desByLabel: null };
+  ensurePuff(R);
+  const K = R.K, labDes = [];
+  for (let k = 0; k < K; k++) labDes[k] = S.technique === 'puff' ? true : !!S.puffLabel[k];
+  const pts = S.technique === 'mix' ? S.puffPts : [];
+  const key = S.technique + ':' + labDes.map(b => b ? 1 : 0).join('') + ':' + pts.map(o => `${o.u.toFixed(4)},${o.v.toFixed(4)},${o.puff ? 1 : 0}`).join(';');
+  if (R._ps && R._ps.key === key) return R._ps;
+  const { W, H, N, L2, compId2 } = R, comps = R.CC2.comps;
+  const compDes = new Uint8Array(comps.length);
+  comps.forEach((c, k) => { compDes[k] = labDes[c.label] ? 1 : 0; });
+  for (const o of pts) { const x = clamp(Math.floor(o.u * W), 0, W - 1), y = clamp(Math.floor(o.v * H), 0, H - 1), i = y * W + x; if (L2[i] >= 0) compDes[compId2[i]] = o.puff ? 1 : 0; }
+  const des = new Uint8Array(N), raised = new Uint8Array(N), desByLabel = new Float64Array(K);
+  let nDes = 0, nRaised = 0, nThin = 0, nWide = 0; const labs = new Set();
+  for (let i = 0; i < N; i++) {
+    const l = L2[i]; if (l < 0 || !compDes[compId2[i]]) continue;
+    des[i] = 1; nDes++; desByLabel[l]++;
+    if (!R.puffOk[i]) nThin++; else if (R.puffWide[i]) nWide++; else { raised[i] = 1; nRaised++; labs.add(l); }
+  }
+  let minGap = Infinity; const labels = [...labs];
+  if (labels.length > 1) {
+    const mk = new Uint8Array(N);
+    for (const a of labels) {
+      for (let i = 0; i < N; i++) mk[i] = raised[i] && L2[i] === a ? 1 : 0;
+      const D = edt(mk, W, H);
+      for (let i = 0; i < N; i++) if (raised[i] && L2[i] !== a && D[i] < minGap) minGap = D[i];
+    }
+  }
+  R._ps = { key, des, raised, nDes, nRaised, nThin, nWide, labels, minGapMm: minGap / R.ppm, compDes, desByLabel };
+  return R._ps;
+}
+function puffPtComp(R, o) { const x = clamp(Math.floor(o.u * R.W), 0, R.W - 1), y = clamp(Math.floor(o.v * R.H), 0, R.H - 1), i = y * R.W + x; return R.L2[i] >= 0 ? R.compId2[i] : -1; }
+function techName(short) { return S.technique === 'puff' ? '3D puff' : S.technique === 'mix' ? (short ? 'puff + flat mix' : 'a mix of 3D puff and flat') : (short ? 'flat' : 'flat embroidery'); }
+
+/* ---------------- evaluation ---------------- */
+function evaluate(R) {
+  const checks = [], recs = [];
+  const mm2in = mm => (mm / 25.4).toFixed(2);
+  const f1 = v => v < 1 ? v.toFixed(2) : v.toFixed(1);
+  const lim = S.maxColors;
+  const threads = usedLabels().map(k => threadFor(k).name);
+  const fab = fabric();
+  /* colours */
+  {
+    const eff = R.effective;
+    const st = eff <= lim ? 'pass' : (eff <= lim + 2 && R.gradFrac < 0.04 ? 'warn' : 'fail');
+    checks.push({ key: 'colors', name: 'Thread colors', value: `${eff} found`, detail: st === 'pass' ? `Within your ${lim}-color limit.` : `Your limit is ${lim}. Each color is its own thread and color change.`, status: st });
+    if (st !== 'pass') recs.push({ sev: st, title: `Cut the palette from ${eff} colors to ${lim} or fewer`, body: `Thread can't blend, so every color becomes its own spool and color change. The simplified view maps the art to ${threads.length} threads: ${threads.join(', ')}. Swap any of them in the thread palette.`, auto: 'Applied in the simplified view' });
+  }
+  /* gradients */
+  {
+    const gp = Math.round(R.gradFrac * 100);
+    const st = R.gradFrac < 0.04 ? 'pass' : R.gradFrac < 0.12 ? 'warn' : 'fail';
+    checks.push({ key: 'grad', name: 'Gradients and shading', value: st === 'pass' ? 'None' : `${gp}% of art`, detail: st === 'pass' ? 'Colors are flat.' : 'Blends and glows stitch as hard stripes.', status: st, view: 'problems' });
+    if (st !== 'pass') recs.push({ sev: st, title: 'Replace gradients and glows with solid shapes', body: `About ${gp}% of the artwork is shaded or graded. Two threads can't blend, so a gradient stitches as visible bands. Pick one or two solid colors for those areas, or drop the effect and let the stitch texture carry it.`, auto: 'Banded into solid threads in the simplified view' });
+  }
+  /* line thickness */
+  {
+    const n = R.thinReport.length;
+    const thinnest = n ? Math.min(...R.thinReport.map(t => t.wmm)) : 0;
+    const frac = R.thinRepCount / Math.max(1, R.fg1);
+    const st = !n ? 'pass' : (frac > 0.06 || n > 8 || thinnest < 0.6 * RULE.line ? 'fail' : 'warn');
+    checks.push({ key: 'thin', name: 'Line thickness', value: n ? `${n} too thin` : 'OK', detail: n ? `Thinnest is ${f1(thinnest)} mm. Minimum is 1.27 mm (0.05 in).` : 'Every line is at least 1.27 mm wide.', status: st, view: 'problems' });
+    if (n) {
+      const ratio = (RULE.line / thinnest).toFixed(1);
+      recs.push({ sev: st, title: `Thicken ${n} thin line${n > 1 ? 's' : ''} to at least 1.3 mm (0.05 in)`, body: `The thinnest measures ${f1(thinnest)} mm at this size, about ${ratio}× too thin for a satin column. Lines under the minimum get sewn as a single running stitch that reads faint, or they drop out.`, auto: R.simp.thin === 'expand' ? `Expanded to ${R.simp.target} mm in the simplified view` : R.simp.thin === 'remove' ? 'Removed in the simplified view' : null });
+    }
+  }
+  /* small details */
+  {
+    const n = R.tiny.length;
+    const st = !n ? 'pass' : n > 10 ? 'fail' : 'warn';
+    const big = n ? Math.max(...R.tiny.map(t => t.dia)) : 0;
+    checks.push({ key: 'tiny', name: 'Small details', value: n ? `${n} too small` : 'OK', detail: n ? `Dots and specks under about 1.8 mm across.` : 'No specks under the minimum size.', status: st, view: 'problems' });
+    if (n) recs.push({ sev: st, title: `Enlarge or remove ${n} small detail${n > 1 ? 's' : ''}`, body: `The largest of them is only ${f1(big)} mm across. Specks this small turn into knots of thread. Make the ones that matter at least 2 mm across, or let them go.`, auto: 'Removed in the simplified view' });
+  }
+  /* gaps */
+  {
+    const n = R.gapList.length;
+    const st = !n ? 'pass' : n > 6 ? 'fail' : 'warn';
+    checks.push({ key: 'gaps', name: 'Gaps between elements', value: n ? `${n} too narrow` : 'OK', detail: n ? 'Open space under 1.27 mm tends to close up.' : 'Open spaces are wide enough to stay open.', status: st, view: 'problems' });
+    if (n) recs.push({ sev: st, title: `Widen or close ${n} narrow gap${n > 1 ? 's' : ''}`, body: `Gaps narrower than 1.27 mm (0.05 in) between stitched elements usually close up or look ragged. Open them up in the art, or fill them with thread, which tends to stitch cleaner than a sliver of open fabric.`, auto: 'Filled with thread in the simplified view' });
+  }
+  /* text */
+  {
+    const lines = R.textLines;
+    if (!lines.length) checks.push({ key: 'text', name: 'Text size', value: 'None found', detail: 'No lines of lettering detected.', status: 'info' });
+    else {
+      const sm = lines[0];
+      const small = lines.filter(t => t.hmm < RULE.text);
+      const st = small.length ? 'fail' : 'pass';
+      checks.push({ key: 'text', name: 'Text size', value: `${mm2in(sm.hmm)} in`, detail: small.length ? `Smallest of ${lines.length} text line${lines.length > 1 ? 's' : ''} is ${f1(sm.hmm)} mm tall. Minimum is 0.25 in.` : `${lines.length} text line${lines.length > 1 ? 's' : ''}, all at least 0.25 in tall.`, status: st, view: 'problems' });
+      if (small.length) {
+        const factor = (RULE.text / sm.hmm).toFixed(1);
+        const dropped = sm.hmm < RULE.textDrop;
+        recs.push({ sev: 'fail', title: `Make the small text at least 0.25 in tall (now ${mm2in(sm.hmm)} in)`, body: `${dropped ? 'Lettering under 0.1 in is usually dropped by the digitizer. ' : ''}Small text loses its counters and blurs in thread. Enlarge it about ${factor}× relative to the rest of the design, use a bold sans-serif, or remove it.`, auto: null });
+      }
+    }
+  }
+  /* contrast */
+  {
+    const low = usedLabels().filter(k => dE(threadFor(k).lab, fab.lab) < 16 && R.counts[k] / R.fg2 > 0.02).map(k => threadFor(k).name);
+    const st = low.length ? 'warn' : 'pass';
+    checks.push({ key: 'contrast', name: `Contrast on ${fabLabel(fab)}`, value: low.length ? `${low.length} low` : 'OK', detail: low.length ? `${low.join(', ')} nearly matches the hat.` : 'Every thread stands out from the hat color.', status: st });
+    if (low.length) recs.push({ sev: 'warn', title: `Change ${low.join(' and ')} thread or the hat color`, body: `${low.join(', ')} ${low.length > 1 ? 'nearly match' : 'nearly matches'} ${fabPhrase(fab)} and will disappear at arm's length. Pick a lighter or darker thread from the palette, or a contrasting hat.`, auto: null });
+  }
+  /* background */
+  {
+    let st = 'pass', value = R.alphaMode ? 'Transparent' : 'Knocked out', detail = 'Only the artwork gets stitched.';
+    if (R.filledBg) { st = 'fail'; value = 'Stitched'; detail = R.bgLab ? 'The background color is being stitched as a solid block.' : 'No plain background found, so the whole rectangle would be stitched.'; }
+    checks.push({ key: 'bg', name: 'Background', value, detail, status: st });
+    if (R.filledBg) recs.push({ sev: 'fail', title: 'Remove the background', body: R.bgLab ? 'The background is being stitched as one solid block, which adds thousands of stitches and stiffens the hat front. Turn on “Leave unstitched”, or export the art with a transparent background.' : 'This file has no plain background, so the whole rectangle would be filled with thread. Export the artwork alone with a transparent background.', auto: null });
+  }
+  /* seam */
+  if (R.seam) {
+    const back = R.seamName === 'back', bad = R.seamInfo.thin > 0 || R.seamInfo.text > 0;
+    checks.push({ key: 'seam', name: back ? 'Back seam' : 'Center seam', value: bad ? 'Crossed' : 'Clear', detail: bad ? `Thin lines or small text sit on the ${back ? 'back' : 'front'} seam.` : (R.seamInfo.crosses ? 'Only bold shapes cross the seam.' : 'Nothing crosses the seam.'), status: bad ? 'warn' : 'pass' });
+    if (bad) recs.push({ sev: 'warn', title: `Keep fine details off the ${back ? 'back' : 'center'} seam`, body: back ? 'The back of this cap has a seam running up the middle from the closure. Thin lines and small lettering that cross it get pushed out of shape. Move the art to one side or make those parts bolder.' : 'This cap has a seam down the middle of the front. Thin lines and small lettering that cross it get pushed out of shape. Shift those elements sideways or make them bolder.', auto: null });
+  }
+  /* fits the cap front */
+  if (placement().id === 'hat' && S.zone === 'front') {
+    const over = R.designWin > 4.51 || R.designHin > 2.26, sz = `${R.designWin.toFixed(2)} × ${R.designHin.toFixed(2)} in`;
+    checks.push({ key: 'area', name: 'Fits the cap front', value: sz, detail: over ? 'Bigger than the usual 4.5 × 2.25 in cap-front area.' : 'Inside the usual 4.5 × 2.25 in cap-front area.', status: over ? 'warn' : 'pass' });
+    if (over) recs.push({ sev: 'warn', title: 'Scale the front art down to fit the cap front', body: `It sits at ${sz} on the hat. Most decorators keep front embroidery within about 4.5 in wide and 2.25 in tall because the crown curves away above that. Shrink it with the studio's Size slider, then check again; small details get harder to keep as it shrinks.`, auto: null });
+  }
+  /* stitch count */
+  {
+    const cov = R.fg2 / (R.ppm * R.ppm) / 645.16, lo = Math.round(cov * 1500 / 100) * 100, hi = Math.round(cov * 2000 / 100) * 100;
+    const limit = R.large ? 30000 : 15000;
+    const st = hi > limit ? 'warn' : 'pass';
+    R.stitchLo = lo; R.stitchHi = hi; R.cov = cov;
+    checks.push({ key: 'stitch', name: 'Stitch count', value: `≈${(lo / 1000).toFixed(1)}–${(hi / 1000).toFixed(1)}k`, detail: `Common limit for this placement is ${limit.toLocaleString()}.`, status: st });
+    if (st === 'warn') recs.push({ sev: 'warn', title: 'Lower the stitch count', body: `An estimated ${lo.toLocaleString()}–${hi.toLocaleString()} stitches is over the usual ${limit.toLocaleString()} limit. Large solid fills add the most. Turn big filled shapes into outlines or leave more open space.`, auto: null });
+  }
+  /* resolution */
+  {
+    const st = R.isVector || R.dpi >= RULE.dpi ? 'pass' : 'warn';
+    checks.push({ key: 'res', name: 'File resolution', value: R.isVector ? 'Vector' : `${Math.round(R.dpi)} DPI`, detail: st === 'pass' ? 'Enough detail for the digitizer.' : 'Under 150 DPI at this size.', status: st });
+    if (st === 'warn') recs.push({ sev: 'warn', title: 'Send the digitizer a sharper file', body: `This file works out to ${Math.round(R.dpi)} DPI at the embroidered size. Aim for 150 DPI or more, or better, the vector original (AI, SVG or PDF).`, auto: null });
+  }
+  /* puff */
+  if (S.technique !== 'flat') {
+    const ps = puffState(), mixMode = S.technique === 'mix';
+    if (!ps.nDes) {
+      checks.push({ key: 'puff', name: '3D puff', value: 'None set', detail: 'Set a thread to Puff in the palette, or click an element in the preview.', status: 'info' });
+    } else {
+      const thinF = ps.nThin / ps.nDes, wideF = ps.nWide / ps.nDes, tp = Math.round(thinF * 100), wp = Math.round(wideF * 100);
+      const st = thinF > 0.4 ? 'fail' : thinF > 0.1 ? 'warn' : 'pass';
+      checks.push({ key: 'puffw', name: 'Puff stroke width', value: st === 'pass' ? 'OK' : `${tp}% too thin`, detail: 'Puff needs strokes 0.2–0.5 in (5–12.7 mm) wide.', status: st, view: 'problems' });
+      if (st !== 'pass') recs.push({ sev: st, title: mixMode ? 'Flatten or bold up the thin puff parts' : 'Bold up the strokes for 3D puff', body: `${tp}% of what is set to puff is narrower than 0.2 in, too thin to cap the foam cleanly. Those parts are shown flat in the preview. ${mixMode ? 'Switch those elements to flat, or thicken them in the artwork.' : 'Block letters and chunky shapes puff best. Or switch to Mix and puff only the bold parts.'}`, auto: 'Thin parts stitched flat in the preview' });
+      if (wideF > 0.05) {
+        checks.push({ key: 'puffwide', name: 'Puff area width', value: `${wp}% too wide`, detail: 'Areas wider than 0.5 in cannot be puffed cleanly.', status: 'warn' });
+        recs.push({ sev: 'warn', title: 'Split wide puff areas into strokes', body: `${wp}% of what is set to puff is wider than 0.5 in. Foam under areas that wide sags and shows. Those parts are shown flat; break them into strokes if they need to be raised.`, auto: 'Shown flat in the preview' });
+      }
+      if (ps.labels.length > 1) {
+        const close = ps.minGapMm < 6.35, g = ps.minGapMm.toFixed(1);
+        checks.push({ key: 'puffc', name: 'Puff colors', value: `${ps.labels.length} colors`, detail: close ? `Two puff colors are only ${g} mm apart; leave about 1/4 in.` : 'One puff color is the safe choice.', status: 'warn' });
+        recs.push({ sev: 'warn', title: close ? 'Separate the puff colors by 1/4 in' : 'Keep the puff to one color', body: close ? `Different puff colors come within ${g} mm of each other. Each color needs its own foam piece, and about 1/4 in of space keeps them from colliding. Move them apart or set one to flat.` : 'Multi-color puff needs about 1/4 in between colors so the foam pieces don\'t collide. Puff one color and stitch the rest flat.', auto: null });
+      }
+    }
+    if (mixMode) recs.push({ sev: 'info', title: 'Puff the anchor, keep the details flat', body: 'The usual combo is a raised wordmark or bold icon, with fine lines, small text and outlines stitched flat around it. Confirm your decorator offers combo puff and flat; some print-on-demand services do not allow both in one area.', auto: null });
+  }
+  if (R.soft) recs.push({ sev: 'info', title: 'Give an unstructured front extra margin', body: 'A dad cap has no stiff backing behind the front, so it flexes and puckers more than a structured cap. Go bolder than the minimums wherever you can.', auto: null });
+  recs.push({ sev: 'info', title: 'Approve a sew-out before the production run', body: 'Send your digitizer the vector original (use the simplified PNG as a guide), the thread colors, and the final size, then sign off on a stitched sample. Thread sheen and stitch direction change how colors read, so the sample is the real proof.', auto: null });
+
+  const fails = checks.filter(c => c.status === 'fail').length, warns = checks.filter(c => c.status === 'warn').length;
+  const score = clamp(100 - fails * 15 - warns * 6, 0, 100);
+  let level, label;
+  if (!fails && warns <= 1) { level = 3; label = 'Ready to embroider'; }
+  else if (!fails) { level = 2; label = 'Minor changes'; }
+  else if (fails <= 2) { level = 1; label = 'Needs simplification'; }
+  else { level = 0; label = 'Not embroiderable as-is'; }
+  const order = { fail: 0, warn: 1, info: 2 };
+  recs.sort((a, b) => order[a.sev] - order[b.sev]);
+  const autoN = recs.filter(r => r.auto && r.sev !== 'info').length;
+  return { checks, recs, fails, warns, score, level, label, autoN, fab };
+}
+
+/* ---------------- views ---------------- */
+const view = $('#sc-canvas');
+const cache = {};
+function drawView() {
+  const R = S.R; if (!R) return;
+  if (view.width !== R.W || view.height !== R.H) { view.width = R.W; view.height = R.H; }
+  const ctx = view.getContext('2d');
+  if (S.view === 'stitched') ctx.putImageData(composeStitched(), 0, 0);
+  else if (S.view === 'simplified') ctx.putImageData(composeSimplified(false), 0, 0);
+  else if (S.view === 'problems') { ctx.clearRect(0, 0, R.W, R.H); ctx.drawImage(composeProblems(), 0, 0); }
+  else { ctx.clearRect(0, 0, R.W, R.H); ctx.drawImage(composeOriginal(), 0, 0); }
+  const labels = { stitched: 'Simulated embroidery preview', simplified: 'Simplified artwork in thread colors', problems: 'Artwork with problem areas highlighted', original: 'Original artwork' };
+  view.setAttribute('aria-label', labels[S.view]);
+  renderLegend();
+}
+function colorsKey() { return usedLabels().map(k => threadFor(k).hex).join() + '|' + fabric().id; }
+function composeStitched() {
+  const R = S.R, ps = puffState(), key = 'st' + colorsKey() + '|' + ps.key;
+  if (cache.key === key && cache.img) return cache.img;
+  const { W, H, N, L2, F0, Sp0, LIT, D2, TW, SH1, ppm } = R;
+  const img = new ImageData(W, H), d = img.data;
+  const cols = []; for (let k = 0; k < R.K; k++) cols.push(threadFor(k).rgb);
+  const fb = fabric().rgb, raised = ps.raised;
+  let SHP = null;
+  const ox2 = Math.round(0.45 * ppm), oy2 = Math.round(0.6 * ppm);
+  if (raised && ps.nRaised) {
+    const pm = new Float32Array(N); for (let i = 0; i < N; i++) pm[i] = raised[i];
+    const rb = Math.max(1, Math.round(0.6 * ppm));
+    SHP = boxBlur(boxBlur(pm, W, H, rb), W, H, rb);
+  }
+  const rimF = 0.7 * ppm, rimP = 2.2 * ppm;
+  for (let i = 0; i < N; i++) {
+    const p = i * 4, l = L2[i];
+    let shp = 0;
+    if (SHP) { const x = i % W, y = (i - x) / W; shp = SHP[clamp(y - oy2, 0, H - 1) * W + clamp(x - ox2, 0, W - 1)]; }
+    if (l >= 0) {
+      const isP = raised !== null && raised[i] === 1;
+      const rim = 1 - Math.min(1, D2[i] / (isP ? rimP : rimF));
+      let f = F0[i] * (1 + (isP ? 0.5 : 0.2) * LIT[i] * rim);
+      if (isP) f *= 1.04; else if (shp) f *= 1 - 0.22 * shp;
+      const c = cols[l], s = 255 * (isP ? 0.2 : 0.13) * Sp0[i] + 28 * (f - 0.9);
+      d[p] = clamp(c[0] * f + s, 0, 255); d[p + 1] = clamp(c[1] * f + s, 0, 255); d[p + 2] = clamp(c[2] * f + s, 0, 255);
+    } else {
+      const f = TW[i] * (1 - 0.38 * SH1[i]) * (1 - 0.32 * shp), s = 20 * (f - 0.95);
+      d[p] = clamp(fb[0] * f + s, 0, 255); d[p + 1] = clamp(fb[1] * f + s, 0, 255); d[p + 2] = clamp(fb[2] * f + s, 0, 255);
+    }
+    d[p + 3] = 255;
+  }
+  cache.key = key; cache.img = img;
+  return img;
+}
+function composeSimplified(transparent) {
+  const R = S.R, img = new ImageData(R.W, R.H), d = img.data;
+  const cols = []; for (let k = 0; k < R.K; k++) cols.push(threadFor(k).rgb);
+  const fb = fabric().rgb;
+  for (let i = 0; i < R.N; i++) {
+    const p = i * 4, l = R.L2[i];
+    const c = l >= 0 ? cols[l] : fb;
+    d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2]; d[p + 3] = (l < 0 && transparent) ? 0 : 255;
+  }
+  return img;
+}
+function composeOriginal() {
+  const R = S.R;
+  if (R._orig) return R._orig;
+  const c = document.createElement('canvas'); c.width = R.W; c.height = R.H; const x = c.getContext('2d');
+  const s = Math.max(6, Math.round(R.ppm * 1.2));
+  for (let yy = 0; yy < R.H; yy += s) for (let xx = 0; xx < R.W; xx += s) { x.fillStyle = ((xx / s + yy / s) & 1) ? '#E4E6EA' : '#F3F4F6'; x.fillRect(xx, yy, s, s); }
+  x.drawImage(R.gc, 0, 0);
+  R._orig = c; return c;
+}
+function composeProblems() {
+  const R = S.R, ps = puffState();
+  if (R._prob && R._probKey === ps.key) return R._prob;
+  const c = document.createElement('canvas'); c.width = R.W; c.height = R.H; const x = c.getContext('2d');
+  const img = new ImageData(R.W, R.H), d = img.data, g = R.gd, pdes = ps.des;
+  for (let i = 0; i < R.N; i++) {
+    const p = i * 4; let v;
+    if (g[p + 3] < 128 || (R.knock && R.L1[i] < 0)) v = 247; else { const gr = 0.3 * g[p] + 0.59 * g[p + 1] + 0.11 * g[p + 2]; v = 255 - (255 - gr) * 0.42; }
+    let r = v, gg = v, b = v;
+    const px = i % R.W, py = (i - px) / R.W;
+    if (R.gradOverlay[i] && ((px + py) % 7) < 3) { r = 37; gg = 99; b = 235; }
+    if (R.gapSig[i]) { r = 139; gg = 92; b = 246; }
+    if (pdes && pdes[i] && !R.puffOk[i] && (px % 4) < 2 && (py % 4) < 2) { r = 219; gg = 39; b = 119; }
+    if (R.thinRep[i]) { r = 220; gg = 38; b = 38; }
+    d[p] = r; d[p + 1] = gg; d[p + 2] = b; d[p + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  const lw = Math.max(1.5, R.ppm * 0.22);
+  x.lineWidth = lw; x.strokeStyle = '#E08A00';
+  R.tiny.forEach(t => { x.beginPath(); x.arc(t.cx, t.cy, Math.max(t.r + lw * 2, R.ppm * 1.1), 0, Math.PI * 2); x.stroke(); });
+  const fs = Math.max(12, Math.round(R.H * 0.045));
+  x.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`;
+  R.textLines.forEach(t => {
+    const bad = t.hmm < RULE.text, col = bad ? '#C0262D' : '#11806A';
+    const pad = Math.max(2, R.ppm * 0.4);
+    x.setLineDash([lw * 3, lw * 2]); x.strokeStyle = col; x.strokeRect(t.minx - pad, t.miny - pad, t.maxx - t.minx + 2 * pad, t.maxy - t.miny + 2 * pad); x.setLineDash([]);
+    const label = `${(t.hmm / 25.4).toFixed(2)} in`;
+    const tw = x.measureText(label).width + 8;
+    let ly = t.miny - pad - fs - 4; if (ly < 0) ly = t.maxy + pad + 2;
+    const lx = clamp(t.minx - pad, 0, R.W - tw);
+    x.fillStyle = col; x.fillRect(lx, ly, tw, fs + 4); x.fillStyle = '#fff'; x.fillText(label, lx + 4, ly + fs - 1);
+  });
+  if (R.seam) { x.setLineDash([R.ppm * 1.5, R.ppm]); x.strokeStyle = 'rgba(40,44,52,.55)'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(R.W * R.seamU, 0); x.lineTo(R.W * R.seamU, R.H); x.stroke(); x.setLineDash([]); }
+  R._prob = c; R._probKey = ps.key; return c;
+}
+
+/* ---------------- UI rendering ---------------- */
+function renderRulers() {
+  const R = S.R, bw = R.boxW, bh = R.boxH;
+  const cls = t => { const f = t * 8 % 8; return f === 0 ? 'l' : f === 4 ? 'm' : (f === 2 || f === 6) ? 's' : 'xs'; };
+  let ht = '', hl = '';
+  const nW = Math.round(bw * 8), nH = Math.round(bh * 8), skipW = bw > 6, skipH = bh > 6;
+  for (let i = 0; i <= nW; i++) {
+    const t = i / 8, c = cls(i / 8); if (c === 'xs' && skipW) continue; const pct = (t / bw * 100).toFixed(3);
+    ht += `<i class="t ${c}" style="left:${pct}%"></i>`;
+    if (c === 'l') ht += `<b class="${i === 0 ? 'first' : (i === nW ? 'last' : '')}" style="left:${pct}%">${t}</b>`;
+  }
+  for (let i = 0; i <= nH; i++) {
+    const t = i / 8, c = cls(i / 8); if (c === 'xs' && skipH) continue; const pct = (t / bh * 100).toFixed(3);
+    hl += `<i class="t ${c}" style="top:${pct}%"></i>`;
+    if (c === 'l' && i !== nH) hl += `<b class="${i === 0 ? 'first' : ''}" style="top:${pct}%">${t}</b>`;
+  }
+  ht += `<span class="ext" style="left:${(R.ext.x0 / bw * 100).toFixed(2)}%;width:${((R.ext.x1 - R.ext.x0) / bw * 100).toFixed(2)}%"></span>`;
+  hl += `<span class="ext" style="top:${(R.ext.y0 / bh * 100).toFixed(2)}%;height:${((R.ext.y1 - R.ext.y0) / bh * 100).toFixed(2)}%"></span>`;
+  $('#sc-rtop').innerHTML = ht; $('#sc-rleft').innerHTML = hl;
+  $('#sc-dims').textContent = `Design ${R.designWin.toFixed(2)} × ${R.designHin.toFixed(2)} in · area ${bw} × ${bh} in`;
+}
+function renderLegend() {
+  const R = S.R, el = $('#sc-legend'), note = $('#sc-viewNote');
+  if (!R || !R.L2) { el.innerHTML = ''; note.textContent = ''; return; }
+  const ps = puffState(), puffOn = S.technique !== 'flat';
+  if (S.view === 'problems') {
+    const items = [];
+    items.push(`<span class="k"><i style="background:#DC2626"></i>Thin lines (${R.thinReport.length})</span>`);
+    items.push(`<span class="k"><i style="background:transparent;border:2px solid #E08A00;border-radius:50%"></i>Small details (${R.tiny.length})</span>`);
+    items.push(`<span class="k"><i style="background:#8B5CF6"></i>Narrow gaps (${R.gapList.length})</span>`);
+    items.push(`<span class="k"><i style="background:repeating-linear-gradient(45deg,#2563EB 0 3px,transparent 3px 6px)"></i>Gradient or shading</span>`);
+    items.push(`<span class="k"><i style="background:transparent;border:2px dashed #C0262D"></i>Text (label shows height)</span>`);
+    if (puffOn) items.push(`<span class="k"><i style="background:radial-gradient(circle,#DB2777 45%,transparent 50%) 0 0/4px 4px"></i>Too thin to puff</span>`);
+    el.innerHTML = items.join('');
+    note.textContent = 'Measured at the size on the rulers. Thin letters are reported under text size, not line thickness.';
+  } else if (S.view === 'stitched') {
+    const fp = Math.round(R.fillPx / Math.max(1, R.fg2) * 100);
+    el.innerHTML = `<span class="k"><i style="background:var(--ink);opacity:.75"></i>Tatami fill ${fp}%</span><span class="k"><i style="background:var(--ink);opacity:.35"></i>Satin ${100 - fp}%</span>` + (puffOn ? `<span class="k"><i style="background:var(--accent)"></i>Raised puff ${Math.round(ps.nRaised / Math.max(1, R.fg2) * 100)}%</span>` : '');
+    note.textContent = `Simulated from the simplified art: tatami fill on areas wider than about 10 mm (0.4 in), satin columns on narrower shapes${R.seam ? ', stitched over the ' + R.seamName + ' seam' : ''}.${puffOn ? ' Raised areas are 3D puff; puff parts under 0.2 in or over 0.5 in wide stay flat.' : ''} Your digitizer sets the real stitch angles and density.`;
+  } else if (S.view === 'simplified') {
+    const sp = R.simp, n = usedLabels().length, bits = [`${n} thread${n > 1 ? 's' : ''}`];
+    if (sp.thin === 'expand' && sp.expanded) bits.push(`thin lines expanded to ${sp.target} mm`);
+    else if (sp.thin === 'remove' && sp.removedThin) bits.push('thin lines removed');
+    else if (sp.thin === 'leave' && R.thinList.length) bits.push('thin lines left as-is');
+    if (sp.smooth) bits.push(`edges smoothed (${['', 'light', 'medium', 'strong'][sp.smooth]})`);
+    if (sp.removedTiny) bits.push(`${sp.removedTiny} small detail${sp.removedTiny > 1 ? 's' : ''} removed`);
+    if (sp.filledHoles) bits.push(`${sp.filledHoles} pinhole${sp.filledHoles > 1 ? 's' : ''} filled`);
+    if (sp.filledGaps) bits.push(`${sp.filledGaps} narrow gap${sp.filledGaps > 1 ? 's' : ''} filled`);
+    if (R.gradFrac >= 0.04) bits.push('gradients banded into solid colors');
+    el.innerHTML = usedLabels().map(k => `<span class="k"><i style="background:${threadFor(k).hex};border:1px solid rgba(0,0,0,.2)"></i>${esc(threadFor(k).name)}</span>`).join('');
+    note.textContent = 'Auto-simplified: ' + bits.join(', ') + '. Small text is not fixed automatically.';
+  } else {
+    el.innerHTML = '';
+    note.textContent = S.src && S.src.sample ? 'Built-in sample, drawn with the kinds of problems this check looks for.' : `${S.srcName || 'Uploaded file'} · ${R.srcW} × ${R.srcH} px${R.isVector ? ' · vector' : ` · ${Math.round(R.dpi)} DPI at this size`}`;
+  }
+}
+function renderSheet() {
+  const R = S.R, ev = evaluate(R); S.ev = ev;
+  const tone = ev.level >= 3 ? 'pass' : ev.level === 2 ? 'warn' : 'fail';
+  const segs = [0, 1, 2, 3].map(i => `<span class="${i <= ev.level ? 'on' : ''}"></span>`).join('');
+  let line = ev.fails || ev.warns ? `${ev.fails} must-fix, ${ev.warns} worth fixing.` : 'Nothing to fix at this size.';
+  if (ev.autoN) line += ` The simplified version handles ${ev.autoN} of them automatically.`;
+  $('#sc-verdict').innerHTML = `<div class="vtop"><div class="vlabel">${ev.label}</div><div class="vscore mono"><strong>${ev.score}</strong>/100</div></div>
+    <div class="meter ${tone}" aria-hidden="true">${segs}</div><div class="meterlab" aria-hidden="true"><span>As-is: no</span><span>Simplify</span><span>Minor</span><span>Ready</span></div>
+    <p class="vline">${line}</p>`;
+  const glyph = { pass: '✓', warn: '!', fail: '×', info: '–' }, word = { pass: 'Pass', warn: 'Warning', fail: 'Fail', info: 'Info' };
+  $('#sc-checks').innerHTML = ev.checks.map(c => `<li class="${c.view ? 'clickable' : ''}" ${c.view ? `data-view="${c.view}" tabindex="0" title="Show on the problem map"` : ''}><span class="st ${c.status}" role="img" aria-label="${word[c.status]}">${glyph[c.status]}</span><div><div class="ckname">${esc(c.name)}</div><div class="ckdetail">${esc(c.detail)}</div></div><div class="ckval mono">${esc(c.value)}</div></li>`).join('');
+  /* threads */
+  const fab = ev.fab;
+  const opts = THREADS.map((t, i) => `<option value="${i}">${t.name}</option>`).join('');
+  const ps = puffState(), mix = S.technique === 'mix';
+  $('#sc-threads').innerHTML = usedLabels().map(k => {
+    const t = threadFor(k), pct = Math.round(R.counts[k] / R.fg2 * 100), low = dE(t.lab, fab.lab) < 16;
+    let seg = '', fit = '';
+    if (mix) {
+      const dl = ps.desByLabel ? ps.desByLabel[k] : 0, all = dl >= R.counts[k], none = dl === 0;
+      seg = `<div class="tseg" role="group" aria-label="${esc(t.name)}: flat or puff"><button type="button" data-k="${k}" data-p="0" aria-pressed="${none}">Flat</button><button type="button" data-k="${k}" data-p="1" aria-pressed="${all}">Puff</button></div>`;
+      if (!all && !none) fit = '<span class="tflag fit">Some elements puff, some flat</span>';
+      else if (R.puffFit[k] && none) fit = '<span class="tflag fit">Strokes are wide enough to puff</span>';
+    }
+    return `<div class="trow${mix ? ' mix' : ''}"><span class="chip" style="background:${t.hex}"></span><select data-k="${k}" aria-label="Thread ${k + 1}">${opts.replace(`value="${THREADS.indexOf(t)}"`, `value="${THREADS.indexOf(t)}" selected`)}</select>${seg}<span class="tpct mono">${pct}%</span>${low ? `<span class="tflag">Low contrast on ${esc(fabLabel(fab))}</span>` : ''}${fit}</div>`;
+  }).join('');
+  /* stats */
+  const fp = Math.round(R.fillPx / Math.max(1, R.fg2) * 100);
+  $('#sc-stats').innerHTML = `<dl class="stats">
+    <dt>Embroidered size</dt><dd>${R.designWin.toFixed(2)} × ${R.designHin.toFixed(2)} in</dd>
+    <dt>Thread coverage</dt><dd>${R.cov.toFixed(2)} sq in</dd>
+    <dt>Est. stitches</dt><dd>${R.stitchLo.toLocaleString()}–${R.stitchHi.toLocaleString()}</dd>
+    <dt>Color changes</dt><dd>${usedLabels().length}</dd>
+    <dt>Fill / satin</dt><dd>${fp}% / ${100 - fp}%</dd>${S.technique !== 'flat' ? `<dt>Raised puff</dt><dd>${Math.round(puffState().nRaised / Math.max(1, R.fg2) * 100)}%</dd>` : ''}
+  </dl><div class="mix" aria-hidden="true"><span style="width:${fp}%;background:var(--ink);opacity:.7"></span><span style="width:${100 - fp}%;background:var(--accent)"></span></div>`;
+  /* recs */
+  const sevWord = { fail: 'Must fix', warn: 'Should fix', info: 'Tip' };
+  $('#sc-recs').innerHTML = ev.recs.map(r => `<li class="rec"><div class="rechead"><span class="pill ${r.sev}">${sevWord[r.sev]}</span></div><h3>${esc(r.title)}</h3><p>${esc(r.body)}</p>${r.auto ? `<div class="auto">${esc(r.auto)}</div>` : ''}</li>`).join('');
+  /* fabric swatches selection */
+  document.querySelectorAll('#sc-fabrics .sw').forEach(b => b.setAttribute('aria-checked', String(b.dataset.id === S.fabric)));
+}
+function refreshAll() {
+  cache.key = null;
+  renderRulers(); renderSheet(); drawView();
+  $('#sc-sampleTag').hidden = !(S.src && S.src.sample);
+  updateMixUI();
+  if (S.reviewMeta && S.reviewMeta !== metaLabel()) $('#sc-reviewStale') && ($('#sc-reviewStale').hidden = false);
+}
+
+/* ---------------- controls ---------------- */
+function initControls() {
+  const sel = $('#sc-placement');
+  fillPlacements();
+  sel.addEventListener('change', () => {
+    S.placement = sel.value; const p = placement();
+    if (p.w) { S.boxW = p.w; S.boxH = p.h; $('#sc-boxW').value = p.w; $('#sc-boxH').value = p.h; }
+    syncSizeLabel(); schedule();
+  });
+  ['boxW', 'boxH'].forEach(id => $('#sc-' + id).addEventListener('change', e => {
+    const v = clamp(parseFloat(e.target.value) || 1, 0.2, 16); e.target.value = v; S[id] = v;
+    if (placement().w && (placement().w !== S.boxW || placement().h !== S.boxH)) { S.placement = 'custom'; sel.value = 'custom'; syncSizeLabel(); }
+    schedule();
+  }));
+  $('#sc-tech').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.technique = b.dataset.v; document.querySelectorAll('#sc-tech button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    if (S.R) { cache.key = null; renderSheet(); drawView(); }
+    updateMixUI();
+  });
+  $('#sc-maxColors').addEventListener('change', e => { const v = clamp(parseInt(e.target.value, 10) || 6, 1, 15); e.target.value = v; S.maxColors = v; schedule(); });
+  const tgt = $('#sc-lineTarget');
+  const syncTarget = () => { $('#sc-targetIn').textContent = `${(S.lineTarget / 25.4).toFixed(3)} in`; tgt.disabled = S.thin !== 'expand'; };
+  $('#sc-thinMode').addEventListener('change', e => { S.thin = e.target.value; syncTarget(); schedule(250, false); });
+  tgt.addEventListener('change', e => { const v = Math.round(clamp(parseFloat(e.target.value) || 1.3, 1.3, 6) * 10) / 10; e.target.value = v; S.lineTarget = v; syncTarget(); schedule(250, false); });
+  $('#sc-smooth').addEventListener('change', e => { S.smooth = +e.target.value; schedule(250, false); });
+  syncTarget();
+  $('#sc-knockout').addEventListener('change', e => { S.knockout = e.target.checked; schedule(); });
+  const fabEl = $('#sc-fabrics');
+  fabEl.innerHTML = `<button type="button" class="sw hat" role="radio" data-id="hat" aria-checked="true" title="The cap's own color"><i id="sc-hatdot" style="background:${HAT ? HAT.hex : '#888'}"></i>This hat</button>` + FABRICS.map(f => `<button type="button" class="sw" role="radio" data-id="${f.id}" aria-checked="false" title="${f.name}" aria-label="${f.name}" style="background:${f.hex}"></button>`).join('');
+  fabEl.addEventListener('click', e => { const b = e.target.closest('.sw'); if (!b) return; S.fabric = b.dataset.id; if (S.R) { cache.key = null; renderSheet(); drawView(); } else fabEl.querySelectorAll('.sw').forEach(x => x.setAttribute('aria-checked', String(x === b))); });
+  $('#sc-tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.view); });
+  $('#sc-tabs').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const tabs = [...document.querySelectorAll('#sc-tabs button')], i = tabs.findIndex(t => t.dataset.view === S.view);
+    const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; setView(n.dataset.view); n.focus();
+  });
+  $('#sc-checks').addEventListener('click', e => { const li = e.target.closest('li[data-view]'); if (li) setView(li.dataset.view); });
+  $('#sc-checks').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { const li = e.target.closest('li[data-view]'); if (li) { e.preventDefault(); setView(li.dataset.view); } } });
+  $('#sc-threads').addEventListener('change', e => { const s = e.target.closest('select'); if (!s) return; S.threadOverride[+s.dataset.k] = +s.value; cache.key = null; renderSheet(); drawView(); });
+  $('#sc-uploadBtn').addEventListener('click', () => $('#sc-file').click());
+  $('#sc-file').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) scLoadFile(f); e.target.value = ''; });
+  $('#sc-sampleBtn').addEventListener('click', () => useSample());
+  const card = $('#sc-stagecard');
+  ['dragenter', 'dragover'].forEach(t => card.addEventListener(t, e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); $('#sc-dropmsg').hidden = false; } }));
+  card.addEventListener('dragleave', e => { if (!card.contains(e.relatedTarget)) $('#sc-dropmsg').hidden = true; });
+  card.addEventListener('drop', e => { e.preventDefault(); $('#sc-dropmsg').hidden = true; const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) scLoadFile(f); });
+  window.addEventListener('paste', e => { if (!OPEN) return; const f = e.clipboardData && [...e.clipboardData.files].find(x => /^image\//.test(x.type)); if (f) scLoadFile(f); });
+  $('#sc-threads').addEventListener('click', e => {
+    const b = e.target.closest('.tseg button'); if (!b || !S.R) return;
+    const k = +b.dataset.k, R = S.R;
+    S.puffLabel[k] = b.dataset.p === '1';
+    S.puffPts = S.puffPts.filter(o => { const c = puffPtComp(R, o); return c < 0 || R.CC2.comps[c].label !== k; });
+    cache.key = null; renderSheet(); drawView(); updateMixUI();
+  });
+  view.addEventListener('click', e => {
+    const R = S.R; if (!R || S.technique !== 'mix' || (S.view !== 'stitched' && S.view !== 'simplified')) return;
+    const rect = view.getBoundingClientRect();
+    const x = clamp(Math.floor((e.clientX - rect.left) / rect.width * R.W), 0, R.W - 1), y = clamp(Math.floor((e.clientY - rect.top) / rect.height * R.H), 0, R.H - 1);
+    const i = y * R.W + x; if (R.L2[i] < 0) return;
+    const comp = R.compId2[i], cur = puffState().compDes[comp];
+    S.puffPts = S.puffPts.filter(o => puffPtComp(R, o) !== comp);
+    S.puffPts.push({ u: (x + 0.5) / R.W, v: (y + 0.5) / R.H, puff: !cur });
+    cache.key = null; renderSheet(); drawView(); updateMixUI();
+  });
+  $('#sc-resetPuff').addEventListener('click', () => { S.puffPts = []; S.puffLabel = {}; if (S.R) { cache.key = null; renderSheet(); drawView(); } updateMixUI(); });
+}
+function setView(v) {
+  S.view = v;
+  document.querySelectorAll('#sc-tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  drawView(); updateMixUI();
+}
+function updateMixUI() {
+  const mix = S.technique === 'mix' && !!S.R;
+  $('#sc-mixHint').hidden = !mix;
+  $('#sc-resetPuff').hidden = !(mix && (S.puffPts.length || Object.keys(S.puffLabel).some(k => S.puffLabel[k])));
+  view.classList.toggle('pickable', mix && (S.view === 'stitched' || S.view === 'simplified'));
+}
+function setBusy(on, text) { $('#sc-busy').hidden = !on; if (text) $('#sc-busyText').textContent = text; }
+function showError(msg) { const el = $('#sc-stageErr'); el.textContent = msg; el.hidden = false; }
+function scLoadFile(file) {
+  if (!/^image\/(png|jpeg|webp|gif|svg\+xml)$/.test(file.type)) { showError('Choose a PNG, JPG, WebP, GIF or SVG image.'); return; }
+  setBusy(true, 'Reading file…');
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const isSvg = file.type === 'image/svg+xml';
+    let w = img.naturalWidth, h = img.naturalHeight; if (isSvg && (!w || !h)) { w = 1600; h = 800; }
+    try { S.upload = { name: file.name, src: sourceFromDrawable(img, w, h, isSvg) }; useUpload(); }
+    catch (e) { setBusy(false); showError('This image could not be read. Try exporting it as a PNG.'); }
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); setBusy(false); showError('This image could not be read. Try exporting it as a PNG.'); };
+  img.src = url;
+}
+let timer = null, pendingFull = false;
+function schedule(delay = 250, full = true) {
+  pendingFull = pendingFull || full;
+  clearTimeout(timer);
+  timer = setTimeout(() => { const f = pendingFull; pendingFull = false; run(f); }, delay);
+}
+async function run(full) {
+  if (!S.src) return;
+  if (!S.R) full = true;
+  const my = ++S.token;
+  $('#sc-stageErr').hidden = true;
+  setBusy(true, full ? `Measuring at ${S.boxW} × ${S.boxH} in…` : 'Simplifying…');
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
+  if (my !== S.token) return;
+  try {
+    let R = S.R;
+    if (full) {
+      const p = placement(), hp = p.id === 'hat' && S.zoneInfo;
+      R = analyze(S.src, { boxW: S.boxW, boxH: S.boxH, maxColors: S.maxColors, knockout: S.knockout, seam: hp ? S.zoneInfo.seam : !!p.seam, seamU: hp ? S.zoneInfo.seamU : 0.5, seamName: hp ? S.zoneInfo.seamName : 'center', soft: hp ? DAD : !!p.soft, large: !!p.large || S.boxW * S.boxH > 30 });
+      if (R.error) { showError(R.error); return; }
+    }
+    simplify(R, { thin: S.thin, target: S.lineTarget, smooth: S.smooth });
+    if (full) { S.threadOverride = {}; S.puffLabel = {}; S.puffPts = []; }
+    S.R = R;
+    refreshAll();
+  } catch (e) {
+    console.error(e); showError('Something went wrong while measuring this file. Try a PNG export of the artwork.');
+  } finally { if (my === S.token) setBusy(false); }
+}
+
+/* ---------------- Claude review ---------------- */
+let sampleFn = null, reviewCtl = null;
+function metaLabel() { return `${S.boxW} × ${S.boxH} in · ${techName(true)} · on ${fabPhrase(fabric())}`; }
+function clearReview() { $('#sc-reviewOut').innerHTML = ''; S.reviewMeta = null; }
+const SAMPLE_ERR = {
+  rate_limited: 'Too many requests right now. Try again in a minute.', image_rejected: 'Claude could not read this image. Try a PNG or JPG.',
+  refused: 'Claude declined to review this image.', invalid_json: 'The review came back in an unexpected format. Try again.',
+  session_expired: 'Sign in to Claude again, then retry.', empty_completion: 'The review came back empty. Try again.', prompt_too_large: 'The request was too large to send.'
+};
+const SAMPLE_GONE = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'images_unavailable'];
+function buildPrompt() {
+  const R = S.R, ev = S.ev, p = placement();
+  const lines = ev.checks.map(c => `- ${c.name}: ${c.value} (${c.status}). ${c.detail}`).join('\n');
+  const texts = R.textLines.map(t => `${t.hmm.toFixed(1)} mm tall`).join(', ') || 'none detected';
+  return `You are an experienced embroidery digitizer reviewing artwork for a hat brand before production.
+The attached image is the ORIGINAL artwork as uploaded, composited on the hat color (${fabric().id === 'hat' ? 'this cap, ' + fabric().hex : fabric().name}).
+
+Job: ${p.id === 'hat' && S.zone ? `${ZONES[S.zone].title} on a ${STYLE_LABEL}, as placed on the hat` : p.name}, embroidered at ${R.designWin.toFixed(2)} × ${R.designHin.toFixed(2)} in. Technique: ${techName(false)}. Thread limit: ${S.maxColors} colors.${S.technique !== 'flat' ? ` Threads set to 3D puff: ${puffState().labels.map(k => threadFor(k).name).join(', ') || 'none yet'}.` : ''}
+
+Pixel measurements at that size (from this page's analysis):
+${lines}
+- Possible text lines found: ${texts}
+
+Rules: text at least 0.25 in (6.35 mm) tall, letters under 0.1 in are usually dropped; lines and shapes at least 0.05 in (1.27 mm) wide; at most ${S.maxColors} thread colors; no gradients, glows or shadows; satin for 0.05–0.5 in wide shapes, tatami fill above that; 3D puff strokes 0.2–0.5 in and ideally one puff color; keep thin text off a 6-panel cap's center seam; strong contrast against the hat color.
+
+Look at the design itself. Identify any lettering and what it says, which elements carry the idea and must be kept, which decorative details can go, where shading or effects are, and how you would simplify it so it stitches cleanly while staying recognizable. Use plain language for a brand owner and their designer. At most 7 changes, most important first.
+
+Reply with only JSON in this shape:
+{"verdict":"ready|minor_changes|simplify|not_as_is","summary":"two sentences","keep":["element to keep"],"changes":[{"element":"what part","problem":"what goes wrong in thread","fix":"specific change","priority":"high|medium|low"}],"text":[{"content":"the words","approx_height_in":0.2,"verdict":"ok|too_small|too_thin","fix":"what to do"}]}`;
+}
+async function reviewBlob() {
+  const src = S.src, k = Math.min(1, 1400 / Math.max(src.w, src.h));
+  const c = document.createElement('canvas'); c.width = Math.round(src.w * k); c.height = Math.round(src.h * k);
+  const x = c.getContext('2d'); x.fillStyle = fabric().hex; x.fillRect(0, 0, c.width, c.height); x.drawImage(src.canvas, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, 'image/png'));
+}
+function renderReview(data, meta) {
+  const out = $('#sc-reviewOut');
+  const vmap = { ready: ['pass', 'Ready to embroider'], minor_changes: ['warn', 'Minor changes'], simplify: ['fail', 'Needs simplification'], not_as_is: ['fail', 'Not embroiderable as-is'] };
+  const v = vmap[data && data.verdict] || ['info', 'Review'];
+  const keep = Array.isArray(data.keep) ? data.keep.filter(Boolean).slice(0, 8) : [];
+  const changes = Array.isArray(data.changes) ? data.changes.filter(c => c && (c.problem || c.fix)).slice(0, 7) : [];
+  const text = Array.isArray(data.text) ? data.text.filter(t => t && t.content).slice(0, 6) : [];
+  const pr = { high: 'fail', medium: 'warn', low: 'info' };
+  out.innerHTML = `<div class="rv">
+    <div class="rv-head"><span class="pill ${v[0]}">${v[1]}</span><span class="note">Reviewed at ${esc(meta)}</span><span class="note" id="sc-reviewStale" hidden>Settings changed since this review.</span></div>
+    ${data.summary ? `<p class="rv-sum">${esc(data.summary)}</p>` : ''}
+    ${keep.length ? `<div><h4>Keep</h4><ul class="rv-keep">${keep.map(k => `<li>${esc(k)}</li>`).join('')}</ul></div>` : ''}
+    ${changes.length ? `<div><h4>Changes</h4><ol class="rv-changes">${changes.map(c => `<li><span class="pill ${pr[c.priority] || 'info'}">${esc(c.priority || 'note')}</span><div><b>${esc(c.element || '')}</b>${c.problem ? ` — ${esc(c.problem)}` : ''}${c.fix ? `<span class="fix">${esc(c.fix)}</span>` : ''}</div></li>`).join('')}</ol></div>` : ''}
+    ${text.length ? `<div><h4>Lettering</h4><div class="tablewrap"><table style="min-width:480px"><thead><tr><th>Text</th><th>Height</th><th>Verdict</th><th>Fix</th></tr></thead><tbody>${text.map(t => `<tr><td>${esc(t.content)}</td><td class="v">${typeof t.approx_height_in === 'number' ? t.approx_height_in.toFixed(2) + ' in' : '–'}</td><td>${esc(String(t.verdict || '').replace('_', ' '))}</td><td>${esc(t.fix || '')}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+  </div>`;
+}
+async function askJSON(prompt, blob, signal) {
+  if (typeof sampleFn.json === 'function') return await sampleFn.json(prompt, { images: [blob], signal });
+  const { text } = await sampleFn(prompt, { images: [blob], signal });
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a < 0 || b < a) throw { code: 'invalid_json' };
+  try { return JSON.parse(text.slice(a, b + 1)); } catch (e) { throw { code: 'invalid_json' }; }
+}
+async function askClaude() {
+  if (!sampleFn || !S.R) return;
+  const btn = $('#sc-askClaude'), stop = $('#sc-stopClaude'), note = $('#sc-reviewNote');
+  btn.disabled = true; stop.hidden = false; note.textContent = 'Thinking… this usually takes 20–60 seconds.';
+  reviewCtl = new AbortController();
+  const meta = metaLabel();
+  try {
+    const blob = await reviewBlob();
+    const data = await askJSON(buildPrompt(), blob, reviewCtl.signal);
+    S.reviewMeta = meta; renderReview(data || {}, meta);
+    note.textContent = 'Run it again after you change the artwork or settings.';
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'cancelled') note.textContent = 'Stopped.';
+    else if (SAMPLE_GONE.includes(code)) { note.textContent = 'Claude review is not available for this page.'; btn.hidden = true; }
+    else note.textContent = SAMPLE_ERR[code] || 'The review was interrupted. Try again.';
+  } finally { btn.disabled = false; stop.hidden = true; reviewCtl = null; }
+}
+async function initCapabilities() {
+  const cl = window.claude;
+  if (!cl || typeof cl.use !== 'function') return;
+  cl.use('sample').then(async s => {
+    if (!s) { $('#sc-reviewNote').textContent = 'Claude review is not available in this view.'; return; }
+    let lim = null; try { lim = typeof s.limits === 'function' ? await s.limits() : null; } catch (e) { lim = null; }
+    if (!lim || !lim.images) { $('#sc-reviewNote').textContent = 'Claude review needs image access, which this view does not have.'; return; }
+    sampleFn = s; $('#sc-askClaude').disabled = false; $('#sc-reviewNote').textContent = 'Sends the original artwork and these measurements to Claude on your account.';
+  }).catch(() => {});
+}
+async function saveCanvas(imgData, name) {
+  const c = document.createElement('canvas'); c.width = imgData.width; c.height = imgData.height; c.getContext('2d').putImageData(imgData, 0, 0);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  if (blob) saveBlob(blob, name);
+}
+$('#sc-askClaude').addEventListener('click', askClaude);
+$('#sc-stopClaude').addEventListener('click', () => reviewCtl && reviewCtl.abort());
+$('#sc-saveSimple').addEventListener('click', () => S.R && saveCanvas(composeSimplified(true), 'cap-stitch-simplified.png'));
+$('#sc-saveStitch').addEventListener('click', () => S.R && saveCanvas(composeStitched(), 'cap-stitch-preview.png'));
+
+
+/* ---------------- studio integration ---------------- */
+let OPEN = false, INIT = false, HAT = null;
+const STYLE_LABEL = { camp: 'camp cap', trucker: 'trucker cap', sixpanel: '6-panel cap', flat: 'flat brim snapback', dad: 'dad hat', bucket: 'bucket hat', visor: 'low crown visor', hvisor: 'high crown visor' }[STYLE] || '5-panel cap';
+const SEAM_FRONT = TRUCK || DAD || FLAT, SEAM_BACK = !BUCKET && !VISOR;
+const SPOTS = ['front', 'left', 'right', 'back', 'backTag', 'under', 'inside', 'inTag'];
+const SPOT_NAME = { front: 'front', left: 'left side', right: 'right side', back: 'back', backTag: 'back tag', under: 'underbrim', inside: 'inside print', inTag: 'inside tag' };
+const fabLabel = f => f.id === 'hat' ? 'this hat' : f.name.toLowerCase();
+const fabPhrase = f => f.id === 'hat' ? 'this hat' : `a ${f.name.toLowerCase()} hat`;
+function placementList() { return S.zone ? [HAT_PLACE, ...PLACEMENTS] : PLACEMENTS; }
+function syncSizeLabel() { $('#sc-sizeLbl').textContent = S.placement === 'hat' ? 'Size on the hat (in)' : 'Max area (in)'; }
+function fillPlacements() {
+  const sel = $('#sc-placement');
+  sel.innerHTML = placementList().map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  sel.value = S.placement; $('#sc-boxW').value = S.boxW; $('#sc-boxH').value = S.boxH; syncSizeLabel();
+}
+function resetPlacement() {
+  if (S.placement === 'hat' || !PLACEMENTS.some(p => p.id === S.placement)) {
+    const p = PLACEMENTS.find(q => q.id === DEFAULT_PLACE); S.placement = p.id; S.boxW = p.w; S.boxH = p.h;
+  }
+  fillPlacements();
+}
+/* The cap's color behind a spot: the panel it sits on, the underbrim, or the inside. */
+function hatColorFor(key) {
+  if (key === 'under') return colors.under;
+  if (key === 'inside') return eff('lining');
+  if (key === 'inTag') return eff('sweat');
+  const want = { front: ['p_front', 'p_lfront', 'p_lside'], left: ['p_lside'], right: ['p_rside'], back: ['p_lback', 'p_rback', 'p_lside'], backTag: ['p_lback', 'p_lside'] }[key] || [];
+  const pk = want.find(k => PANELS.some(p => p[0] === k));
+  return pk ? eff(pk) : colors.crown;
+}
+function setHat(key) {
+  const hex = hatColorFor(key || 'front'), rgb = hexRgb(hex);
+  HAT = { id: 'hat', name: 'This hat', hex, rgb, lab: labOfRgb(rgb) };
+  const dot = $('#sc-hatdot'); if (dot) dot.style.background = hex;
+  cache.key = null;
+}
+/* A spot's artwork, measured at the size and position it has on the 3D hat. */
+function zoneInfo(key) {
+  const z = ZONES[key]; if (!z || !z.tex) return null;
+  const art = buildArt(key, 'art') || buildArt(key); if (!art) return null;
+  const cw = art.width, ch = art.height, d = art.getContext('2d').getImageData(0, 0, cw, ch).data;
+  let x0 = cw, y0 = ch, x1 = -1, y1 = -1;
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) if (d[(y * cw + x) * 4 + 3] > 128) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const cmPx = z.size / cw, w = Math.max(0.2, Math.round((x1 - x0 + 1) * cmPx / 2.54 * 100) / 100), h = Math.max(0.2, Math.round((y1 - y0 + 1) * cmPx / 2.54 * 100) / 100);
+  // where a center seam crosses the art: the hat's centerline sits at 0.5 - h/size across the art canvas
+  const seamName = key === 'back' || key === 'backTag' ? 'back' : 'center';
+  let seam = (key === 'front' && SEAM_FRONT) || ((key === 'back' || key === 'backTag') && SEAM_BACK);
+  const seamU = ((0.5 - z.h / z.size) * cw - x0) / (x1 - x0 + 1);
+  if (seamU < 0.02 || seamU > 0.98 || Math.abs(z.rot) > 8) seam = false;
+  const vec = z.source === 'text' || z.source === 'sample' || /\.svg$/i.test(z.imageName || '');
+  return { key, art, vec, box: { w, h }, seam, seamU, seamName, bbox: { x0, y0, x1, y1, cw, ch } };
+}
+function fillSources() {
+  const sel = $('#sc-source'), opts = [];
+  for (const k of SPOTS) if (ZONES[k] && ZONES[k].tex) opts.push(`<option value="${k}">${esc(ZONES[k].title)} on the hat</option>`);
+  if (S.upload) opts.push(`<option value="upload">${esc(S.upload.name)}</option>`);
+  opts.push('<option value="sample">Sample artwork</option>');
+  sel.innerHTML = opts.join('');
+  sel.value = S.zone || (S.src && S.upload && S.src === S.upload.src ? 'upload' : 'sample');
+}
+function useZone(key) {
+  const info = zoneInfo(key); if (!info) return false;
+  S.zone = key; S.zoneInfo = info; S.srcName = ZONES[key].title;
+  S.src = sourceFromDrawable(info.art, info.art.width, info.art.height, info.vec);
+  HAT_PLACE.w = info.box.w; HAT_PLACE.h = info.box.h;
+  HAT_PLACE.name = `As placed on the hat (${info.box.w} × ${info.box.h} in)`;
+  S.placement = 'hat'; S.boxW = info.box.w; S.boxH = info.box.h;
+  setHat(key); S.fabric = 'hat';
+  document.querySelectorAll('#sc-fabrics .sw').forEach(b => b.setAttribute('aria-checked', String(b.dataset.id === 'hat')));
+  fillPlacements(); fillSources();
+  $('#sc-target').value = ['front', 'left', 'right', 'back'].includes(key) ? key : 'front';
+  $('#sc-intro').textContent = `Checking the ${SPOT_NAME[key]} art of your ${STYLE_LABEL} at the size it sits on the hat. Change the art in the studio and open Stitch check again to recheck it.`;
+  clearReview(); schedule(0);
+  return true;
+}
+async function useSample() {
+  setBusy(true, 'Loading sample…');
+  S.zone = null; S.zoneInfo = null; resetPlacement();
+  S.src = await makeSample(); S.srcName = 'Sample';
+  fillSources();
+  $('#sc-intro').textContent = 'Checks whether art can be embroidered at its real size, what to simplify, and how it will look in thread. This is a sample; pick your own art above.';
+  clearReview(); schedule(0);
+}
+function useUpload() {
+  if (!S.upload) return useSample();
+  S.zone = null; S.zoneInfo = null; resetPlacement();
+  S.src = S.upload.src; S.srcName = S.upload.name; fillSources();
+  $('#sc-intro').textContent = `Checking ${S.upload.name}. Choose a placement to measure it at, then put the simplified version on the hat.`;
+  clearReview(); schedule(0);
+}
+function open(key) {
+  if (!INIT) {
+    initControls(); initCapabilities(); INIT = true;
+    $('#sc-source').addEventListener('change', e => { const v = e.target.value; if (v === 'sample') useSample(); else if (v === 'upload') useUpload(); else if (!useZone(v)) useSample(); });
+    $('#sc-back').addEventListener('click', close);
+    $('#sc-putBtn').addEventListener('click', putOnHat);
+    document.addEventListener('keydown', e => { if (OPEN && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); close(); } });
+  }
+  stopSpin();
+  OPEN = true; $('#sc-view').hidden = false; $('.app').inert = true; $('#sc-view').scrollTop = 0;
+  const canSave = !hasHost || !!downloads; $('#sc-saveSimple').hidden = !canSave; $('#sc-saveStitch').hidden = !canSave;
+  let k = null;
+  if (key && ZONES[key]) k = ZONES[key].tex ? key : null;
+  else k = (ZONES[activeTab] && ZONES[activeTab].tex) ? activeTab : SPOTS.find(z => ZONES[z].tex) || null;
+  if (k && useZone(k)) { /* measuring the hat's art */ }
+  else {
+    setHat(key && ZONES[key] ? key : 'front');
+    if (key && ZONES[key]) toast(`There’s no art on the ${SPOT_NAME[key]} yet. Showing a sample; upload your art here or in the studio.`);
+    if (S.src && !S.zone) { fillSources(); if (S.R) { cache.key = null; renderSheet(); drawView(); } }
+    else useSample();
+  }
+  $('#sc-back').focus({ preventScroll: true });
+}
+function close() {
+  if (!OPEN) return;
+  OPEN = false; $('#sc-view').hidden = true; $('.app').inert = false;
+  if (reviewCtl) reviewCtl.abort();
+  dirty = true; canvas.focus({ preventScroll: true });
+}
+/* Put the simplified art on the 3D hat with the Embroidered finish, keeping its size and spot. */
+function putOnHat() {
+  const R = S.R; if (!R) return;
+  const key = $('#sc-target').value, z = ZONES[key]; if (!z) return;
+  const full = document.createElement('canvas'); full.width = R.W; full.height = R.H;
+  full.getContext('2d').putImageData(composeSimplified(true), 0, 0);
+  const d = full.getContext('2d').getImageData(0, 0, R.W, R.H).data;
+  let x0 = R.W, y0 = R.H, x1 = -1, y1 = -1;
+  for (let y = 0; y < R.H; y++) for (let x = 0; x < R.W; x++) if (d[(y * R.W + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) { toast('There’s nothing left to stitch. Turn background knock-out off or pick other art.'); return; }
+  const art = document.createElement('canvas'); art.width = x1 - x0 + 1; art.height = y1 - y0 + 1;
+  art.getContext('2d').drawImage(full, x0, y0, art.width, art.height, 0, 0, art.width, art.height);
+  const wCm = art.width / R.ppm / 10;
+  if (S.zone === key && S.zoneInfo) {
+    // keep the art where it was: the centre of the stitched shapes lands where the original's centre was
+    const b = S.zoneInfo.bbox, old = z.size, oldH = old * b.ch / b.cw;
+    const dx = ((b.x0 + b.x1 + 1) / 2 / b.cw - 0.5) * old + ((x0 + x1 + 1) / 2 - R.W / 2) / R.ppm / 10;
+    const dy = ((b.y0 + b.y1 + 1) / 2 / b.ch - 0.5) * oldH + ((y0 + y1 + 1) / 2 - R.H / 2) / R.ppm / 10;
+    z.h = Math.round((z.h + (key === 'right' ? -dx : dx)) * 100) / 100; z.v = Math.round((z.v - dy) * 100) / 100;
+  } else Object.assign(z, z.defaults);
+  const want = Math.round(wCm * 10) / 10;
+  z.size = Math.round(clamp(wCm, z.ranges.size[0], z.ranges.size[1]) * 100) / 100;
+  const resized = Math.abs(z.size - wCm) > 0.05;
+  Object.assign(z, { source: 'image', text: '', image: art, imageOrig: art, imageName: 'Simplified for embroidery', bgOn: false, bgColor: null, backing: 'embroidered', fill: null });
+  refreshArt(key); syncZoneUI(key);
+  close(); selectTab(key, true, true);
+  toast(resized ? `Put the simplified art on the ${SPOT_NAME[key]} at ${z.size.toFixed(1)} cm wide (it was checked at ${want} cm, outside what this spot allows). Check it again at this size.` : `Put the simplified art on the ${SPOT_NAME[key]} as embroidery. Undo brings back the original.`);
+}
+$('#stitchBtn').addEventListener('click', () => open());
+return { open, close, isOpen: () => OPEN };
+})();
 
 /* ---------- boot ---------- */
 $('#ropeToggle').checked=ropeOn;rope.visible=ropeOn;

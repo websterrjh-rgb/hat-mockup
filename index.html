@@ -976,8 +976,14 @@ const uX=th=>(th+Math.PI)/TAU*CW, aY=a=>(1-a)*CH;
 const PROFILE_CM=(function(){let L=0,p=crownPoint(Math.PI/2,0);for(let k=1;k<=200;k++){const q=crownPoint(Math.PI/2,k/200);L+=Math.hypot(q[0]-p[0],q[1]-p[1],q[2]-p[2]);p=q;}return L;})();
 
 function paintCrown(){paintCrownCanvas(crownCanvas,crownTex,colors.crown,eff('binding'),true);paintCrownCanvas(insideCanvas,insideTex,eff('lining'),eff('binding'),false);}
+let BAKING_MASK=false; // true while the crown is painted as a stitch or seam mask for the relief maps
 function paintCrownCanvas(cv,tex,base,binding,outside){
   const g=cv.getContext('2d'),dark=isDark(base);
+  // every row of stitching drops a hairline shadow onto the cloth below it, so the thread sits on the fabric
+  delete g.stroke;
+  if(!BAKING_MASK){const raw=g.stroke.bind(g);g.stroke=function(){const d=g.getLineDash().length>0;
+    if(d){g.shadowColor=dark?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.3)';g.shadowOffsetX=0.7;g.shadowOffsetY=1.8;g.shadowBlur=1.2;}
+    raw();if(d){g.shadowColor='rgba(0,0,0,0)';g.shadowOffsetX=g.shadowOffsetY=g.shadowBlur=0;}};}
   g.globalCompositeOperation='source-over';g.clearRect(0,0,CW,CH);
   g.fillStyle=base;g.fillRect(0,0,CW,CH);
   // panel colors: a band between two angles (both halves of the texture handled by sign), or a camp panel outline
@@ -1147,6 +1153,16 @@ function paintCrownCanvas(cv,tex,base,binding,outside){
     g.moveTo(pts[0][0],CH+2);pts.forEach(p=>g.lineTo(p[0],p[1]));g.lineTo(side>0?CW+2:-2,pts[pts.length-1][1]);g.lineTo(side>0?CW+2:-2,CH+2);g.closePath();g.fill();
     g.globalCompositeOperation='source-over';
   }
+  delete g.stroke;
+  if(!BAKING_MASK){ // soft shade baked in where light can't reach as easily
+    g.save();g.globalCompositeOperation='source-atop';
+    if(outside){ // along the base, where the bill tucks in under the crown
+      const x0=uX(-THB),x1=uX(THB),hgt=Math.round(CH*0.06),n=48;
+      for(let k=0;k<n;k++){const t=(k+0.5)/n,e=BUCKET?1:Math.min(1,Math.min(t,1-t)/0.1),sm=e*e*(3-2*e),xa=Math.round(x0+(x1-x0)*k/n),xb=Math.round(x0+(x1-x0)*(k+1)/n);
+        const gr=g.createLinearGradient(0,CH-hgt,0,CH);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,'+(0.2*sm).toFixed(3)+')');g.fillStyle=gr;g.fillRect(xa,CH-hgt,xb-xa,hgt);}
+    }else{ // inside: the deeper into the crown, the less light gets in
+      const gr=g.createLinearGradient(0,0,0,CH);gr.addColorStop(0,'rgba(0,0,0,0.28)');gr.addColorStop(1,'rgba(0,0,0,0.06)');g.fillStyle=gr;g.fillRect(0,0,CW,CH);}
+    g.restore();}
   fabricGrain(g,CW,CH,dark);
   tex.needsUpdate=true;
 }
@@ -1361,6 +1377,9 @@ const brimTopMat=new THREE.MeshStandardMaterial({map:brimTex,roughness:0.82,side
 const brimTop=new THREE.Mesh(brimGeo(BT,true),brimTopMat);brimTop.castShadow=true;scene.add(brimTop);
 const underMat=new THREE.MeshStandardMaterial({color:lin(colors.under),roughness:0.85,side:THREE.DoubleSide});
 const underGeo=brimGeo(-BT,false);
+{const uvA=underGeo.attributes.uv,col=new Float32Array(uvA.count*3); // the underside sits in shade close to the crown
+  for(let i=0;i<uvA.count;i++){const t=Math.min(1,uvA.getY(i)/0.5),f=0.74+0.26*t*t*(3-2*t);col[3*i]=col[3*i+1]=col[3*i+2]=f;}
+  underGeo.setAttribute('color',new THREE.BufferAttribute(col,3));underMat.vertexColors=true;}
 const brimBottom=new THREE.Mesh(underGeo,underMat);brimBottom.castShadow=true;scene.add(brimBottom);
 const edgeMat=new THREE.MeshStandardMaterial({color:lin(colors.brim),roughness:0.8,side:THREE.DoubleSide});
 (function(){
@@ -1377,16 +1396,17 @@ const BRIM_ROWS=BUCKET?[0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:CAMP?[0.56,0.66,0.76,0.
 function paintBrim(){
   const g=brimCanvas.getContext('2d'),W=brimCanvas.width,Hh=brimCanvas.height,base=colors.brim;
   g.fillStyle=base;g.fillRect(0,0,W,Hh);fabricGrain(g,W,Hh,isDark(base));
+  {const gr=g.createLinearGradient(0,Hh*0.89,0,Hh);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,0.24)');g.fillStyle=gr;g.fillRect(0,Hh*0.89,W,Hh*0.11);} // shade where the bill runs in under the crown
   g.strokeStyle=eff('stitchBrim');g.lineWidth=2.4;g.setLineDash([10,6]);
-  const rows=BRIM_ROWS;
-  for(const w of rows){const y=(1-w)*Hh;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  const rows=BRIM_ROWS,shOn=c=>{c.shadowColor=isDark(base)?'rgba(0,0,0,0.55)':'rgba(0,0,0,0.3)';c.shadowOffsetX=0.6;c.shadowOffsetY=1.6;c.shadowBlur=1.1;},shOff=c=>{c.shadowColor='rgba(0,0,0,0)';c.shadowOffsetX=c.shadowOffsetY=c.shadowBlur=0;};
+  shOn(g);for(const w of rows){const y=(1-w)*Hh;g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}shOff(g);
   g.setLineDash([]);
   if(BUCKET){g.strokeStyle=shade(base,isDark(base)?-0.3:-0.18);g.lineWidth=3;for(const x of[W/2,1,W-1]){g.beginPath();g.moveTo(x,0);g.lineTo(x,Hh);g.stroke();}} // brim seams front and back
   brimTex.needsUpdate=true;
   if(CAMP||SIX||FLAT||BUCKET||HV){ // flat bills are stitched through, so the rows show underneath too
     const u=underRowCanvas.getContext('2d'),ub=colors.under;u.fillStyle=ub;u.fillRect(0,0,W,Hh);fabricGrain(u,W,Hh,isDark(ub));
     u.strokeStyle=shade(ub,isDark(ub)?0.2:-0.2);u.lineWidth=2.4;u.setLineDash([10,6]);
-    for(const w of rows){const y=(1-w)*Hh;u.beginPath();u.moveTo(0,y);u.lineTo(W,y);u.stroke();}u.setLineDash([]);underRowTex.needsUpdate=true;}
+    shOn(u);for(const w of rows){const y=(1-w)*Hh;u.beginPath();u.moveTo(0,y);u.lineTo(W,y);u.stroke();}shOff(u);u.setLineDash([]);underRowTex.needsUpdate=true;}
 }
 const underRowCanvas=document.createElement('canvas');underRowCanvas.width=2048;underRowCanvas.height=512;
 const underRowTex=new THREE.CanvasTexture(underRowCanvas);underRowTex.encoding=THREE.sRGBEncoding;underRowTex.anisotropy=maxAniso;
@@ -3114,7 +3134,12 @@ renderWelcome();
 let FABRIC_GRAIN=null;
 function fabricGrain(g,W,Hh,dark){
   if(!FABRIC_GRAIN)return;
-  g.save();g.globalCompositeOperation='source-atop';g.globalAlpha=dark?0.07:0.06;g.fillStyle=FABRIC_GRAIN;g.fillRect(0,0,W,Hh);g.restore();
+  g.save();g.globalCompositeOperation='source-atop';g.globalAlpha=dark?0.07:0.06;g.fillStyle=FABRIC_GRAIN;g.fillRect(0,0,W,Hh);
+  // dyed cloth is never one perfectly even tone: broad, soft patches a touch lighter or darker (same every repaint)
+  g.globalAlpha=1;let sd=(W*31+Hh*17)>>>0;const rnd=()=>{sd=(sd+0x6D2B79F5)>>>0;let t=sd;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};
+  for(let i=0,n=Math.round(W/60);i<n;i++){const x=rnd()*W,y=rnd()*Hh,r=Hh*(0.25+0.4*rnd()),a=(dark?0.02:0.014)*(0.4+0.6*rnd()),c=rnd()<0.5?'0,0,0':'255,255,255';
+    for(const ox of[0,-W,W]){if(x+ox+r<0||x+ox-r>W)continue;const gr=g.createRadialGradient(x+ox,y,0,x+ox,y,r);gr.addColorStop(0,'rgba('+c+','+a.toFixed(3)+')');gr.addColorStop(1,'rgba('+c+',0)');g.fillStyle=gr;g.fillRect(x+ox-r,y-r,2*r,2*r);}}
+  g.restore();
 }
 function makeGrainPattern(){
   const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');
@@ -3128,7 +3153,7 @@ function makeGrainPattern(){
   return g.createPattern(c,'repeat');
 }
 // W x Hh canvas; su/sv = pixels per cm across/down; mask = ImageData of stitching (bright = thread); wrap = texture wraps across
-function fabricNormalCanvas(W,Hh,su,sv,mask,wrap,seam){
+function fabricNormalCanvas(W,Hh,su,sv,mask,wrap,seam,seamK=1){
   const N=W*Hh,h=new Float32Array(N),P=0.085,amp=0.006,ca=0.42,sa=0.91;
   for(let y=0;y<Hh;y++){const Y=y/sv;
     for(let x=0;x<W;x++){const X=x/su,i=y*W+x;
@@ -3145,7 +3170,7 @@ function fabricNormalCanvas(W,Hh,su,sv,mask,wrap,seam){
   }
   if(seam){ // seam = groove strength 0..1; a sharp crease in the middle, the folded allowance padding up either side
     const narrow=blurField(blurField(seam,W,Hh,2,wrap),W,Hh,2,wrap),wide=blurField(blurField(seam,W,Hh,12,wrap),W,Hh,12,wrap);
-    for(let i=0;i<N;i++)h[i]+=0.12*wide[i]-0.08*narrow[i];
+    for(let i=0;i<N;i++)h[i]+=seamK*(0.12*wide[i]-0.08*narrow[i]);
   }
   const c=document.createElement('canvas');c.width=W;c.height=Hh;const g=c.getContext('2d'),img=g.createImageData(W,Hh),o=img.data;
   for(let y=0;y<Hh;y++){const y0=y>0?y-1:y,y1=y<Hh-1?y+1:y;
@@ -3174,7 +3199,8 @@ function blurField(a,W,Hh,r,wrap){ // separable box blur of a W x Hh float field
 function seamField(){
   const sc=document.createElement('canvas');sc.width=CW;sc.height=CH;const saved={...colors},keep=FABRIC_GRAIN,perf=perforated;
   for(const k in PANEL_RESET)colors[k]=null;colors.stitchCrown='#808080';colors.mesh='#808080';FABRIC_GRAIN=null;perforated=false; // holes can be switched off, so they stay out of the relief
-  try{paintCrownCanvas(sc,{},'#808080','#808080',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;perforated=perf;}
+  BAKING_MASK=true;
+  try{paintCrownCanvas(sc,{},'#808080','#808080',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;perforated=perf;BAKING_MASK=false;}
   const d=sc.getContext('2d').getImageData(0,0,CW,CH).data,f=new Float32Array(CW*CH);
   for(let i=0;i<f.length;i++){const k=i*4;if(d[k+3]<128)continue;f[i]=Math.max(0,Math.min(1,(120-d[k+1])/22));}
   return f;
@@ -3185,8 +3211,8 @@ function buildFabric(){
     // stitching mask: the crown painted black with white thread, using the same seam and stitch layout
     const mc=document.createElement('canvas');mc.width=CW;mc.height=CH;const saved={...colors};
     for(const k in PANEL_RESET)colors[k]=null;colors.stitchCrown='#ffffff';colors.mesh='#000000';
-    const keep=FABRIC_GRAIN;FABRIC_GRAIN=null;
-    try{paintCrownCanvas(mc,{},'#000000','#000000',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;}
+    const keep=FABRIC_GRAIN;FABRIC_GRAIN=null;BAKING_MASK=true;
+    try{paintCrownCanvas(mc,{},'#000000','#000000',true);}finally{Object.assign(colors,saved);FABRIC_GRAIN=keep;BAKING_MASK=false;}
     let seam=null;try{seam=seamField();}catch(e){console.warn('seam relief skipped',e);}
     const crownN=fabricNormalCanvas(CW,CH,CW/(TAU*A*1.12),CH/PROFILE_CM,mc.getContext('2d').getImageData(0,0,CW,CH),true,seam);
     crownMat.normalMap=crownN;crownMat.normalScale.set(0.9,0.9);crownMat.needsUpdate=true;
@@ -3200,12 +3226,25 @@ function buildFabric(){
     rg.fillStyle='#000';rg.fillRect(0,0,BW,BH);rg.strokeStyle='#fff';rg.lineWidth=2.4;rg.setLineDash([10,6]);
     for(const w of BRIM_ROWS){const y=(1-w)*BH;rg.beginPath();rg.moveTo(0,y);rg.lineTo(BW,y);rg.stroke();}
     const rows=rg.getImageData(0,0,BW,BH);
-    brimTopMat.normalMap=fabricNormalCanvas(BW,BH,su,sv,rows,false);brimTopMat.normalScale.set(0.9,0.9);brimTopMat.needsUpdate=true;
+    // each row pinches the cloth down onto the board, so the fabric pillows up slightly between the rows
+    let rowF=null;try{rowF=new Float32Array(BW*BH);for(const w of BRIM_ROWS){const y=Math.round((1-w)*BH);for(let yy=Math.max(0,y-1);yy<=Math.min(BH-1,y+1);yy++)rowF.fill(1,yy*BW,(yy+1)*BW);}}catch(e){rowF=null;}
+    brimTopMat.normalMap=fabricNormalCanvas(BW,BH,su,sv,rows,false,rowF,0.7);brimTopMat.normalScale.set(0.9,0.9);brimTopMat.needsUpdate=true;
     underMat.normalMap=(CAMP||SIX||FLAT||BUCKET||HV)?brimTopMat.normalMap:fabricNormalCanvas(BW,BH,su,sv,null,false);
     underMat.normalScale.set(0.8,0.8);underMat.needsUpdate=true;
   }catch(e){console.warn('brim fabric map skipped',e);}
 }
 buildFabric();
+// Cloth catches light differently from a hard surface: the tiny fibers standing off it brighten the fabric where it
+// turns away from the eye. Each fabric material gets that soft edge glow, in proportion to the light already on it.
+function clothSheen(mat,k){
+  if(!mat||mat.userData.clothSheen)return;mat.userData.clothSheen=k;const prev=mat.onBeforeCompile;
+  mat.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);
+    sh.fragmentShader=sh.fragmentShader.replace('#include <tonemapping_fragment>',
+      '{ float clothF = pow( 1.0 - clamp( abs( dot( normalize( normal ), normalize( vViewPosition ) ) ), 0.0, 1.0 ), 3.0 );\n  gl_FragColor.rgb += ( reflectedLight.directDiffuse + reflectedLight.indirectDiffuse ) * ( clothF * '+k.toFixed(3)+' ); }\n#include <tonemapping_fragment>');};
+  mat.customProgramCacheKey=function(){return'cloth'+k.toFixed(3);};mat.needsUpdate=true;
+}
+try{for(const [m,k] of[[crownMat,0.42],[brimTopMat,0.4],[underMat,0.32],[edgeMat,0.4],[visorEdgeMat,0.4],[buttonMat,0.35],[ropeMat,0.3],[liningMat,0.2],[sweatMat,0.2]])clothSheen(m,k);}catch(e){console.warn('cloth sheen skipped',e);}
+try{DECALS.inside[0].d.mesh.material.color.setScalar(0.72);}catch(e){} // the inside print sits in the same shade as the lining around it
 
 /* ---------- Stitch check: is this art embroiderable, and what to simplify ---------- */
 const StitchCheck = (function () {

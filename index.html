@@ -1843,6 +1843,46 @@ function buildPatchArt(key){
   const z=ZONES[key],all=buildArt(key);
   if(!all)return null;
   if(z.backing==='none')return{color:all,bump:null,scale:1};
+  if(z.backing==='tpu'){
+    /* TPU heat transfer: the artwork is molded into a thin, flexible raised piece, cut to the shape of the art.
+       Flat top with a narrow rounded bevel at every edge, a glossy finish that catches the light on the bevels,
+       and a crisp, small shadow because the piece is only about 1 mm thick. */
+    const sc0=Math.min(1,1000/Math.max(all.width,all.height));
+    const aw=Math.max(2,Math.round(all.width*sc0)),ah=Math.max(2,Math.round(all.height*sc0));
+    const M=Math.max(aw,ah),pad=Math.round(M*0.04),W=aw+2*pad,H=ah+2*pad;
+    const art=cvs(W,H),gx=art.getContext('2d');gx.imageSmoothingQuality='high';gx.drawImage(all,pad,pad,aw,ah);
+    const src=gx.getImageData(0,0,W,H).data,N=W*H;
+    const pxPerMm=M/Math.max(10,z.size*10),R=Math.max(2.5,0.75*pxPerMm);
+    const dist=new Float32Array(N),BIG=1e6;
+    for(let i=0;i<N;i++)dist[i]=src[i*4+3]>110?BIG:0;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(!dist[i])continue;let d=dist[i];
+      if(x>0)d=Math.min(d,dist[i-1]+1);if(y>0){d=Math.min(d,dist[i-W]+1);if(x>0)d=Math.min(d,dist[i-W-1]+1.414);if(x<W-1)d=Math.min(d,dist[i-W+1]+1.414);}dist[i]=d;}
+    for(let y=H-1;y>=0;y--)for(let x=W-1;x>=0;x--){const i=y*W+x;if(!dist[i])continue;let d=dist[i];
+      if(x<W-1)d=Math.min(d,dist[i+1]+1);if(y<H-1){d=Math.min(d,dist[i+W]+1);if(x<W-1)d=Math.min(d,dist[i+W+1]+1.414);if(x>0)d=Math.min(d,dist[i+W-1]+1.414);}dist[i]=d;}
+    const hgt=new Float32Array(N);for(let i=0;i<N;i++){const t=Math.min(1,dist[i]/R);hgt[i]=dist[i]>0?Math.sin(t*Math.PI/2):0;}
+    const L=[-0.45,-0.6,0.66],ll=Math.hypot(...L);L[0]/=ll;L[1]/=ll;L[2]/=ll;
+    const Hv=[L[0],L[1],L[2]+1],hl=Math.hypot(...Hv);Hv[0]/=hl;Hv[1]/=hl;Hv[2]/=hl;
+    const out=gx.createImageData(W,H),o=out.data,bumpData=new Uint8ClampedArray(N*4);
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+      const i=y*W+x,k=i*4,al=src[k+3];bumpData[k+3]=255;if(al<8)continue;
+      const dhx=(hgt[i+1]-hgt[i-1])*R*0.5,dhy=(hgt[i+W]-hgt[i-W])*R*0.5;
+      let nx=-dhx,ny=-dhy,nz=1;const nl=Math.hypot(nx,ny,nz);nx/=nl;nz/=nl;ny/=nl;
+      const diff=Math.max(0,nx*L[0]+ny*L[1]+nz*L[2]),edge=1-nz; // edge: 0 on the flat top, up to 1 on the bevel
+      const spec=Math.pow(Math.max(0,nx*Hv[0]+ny*Hv[1]+nz*Hv[2]),24)*Math.min(1,edge*3)*0.85;
+      const shadeK=1+0.8*(diff-0.66);
+      for(let c=0;c<3;c++)o[k+c]=Math.max(0,Math.min(255,src[k+c]*shadeK+255*spec));
+      o[k+3]=al;bumpData[k]=bumpData[k+1]=bumpData[k+2]=Math.round(hgt[i]*230+10);
+    }
+    const color=cvs(W,H),g=color.getContext('2d');g.putImageData(out,0,0);
+    // gloss: a soft diagonal sheen over the flat top
+    const sh=g.createLinearGradient(0,0,W*0.6,H);sh.addColorStop(0,'rgba(255,255,255,0.16)');sh.addColorStop(0.42,'rgba(255,255,255,0.03)');sh.addColorStop(1,'rgba(255,255,255,0)');
+    g.save();g.globalCompositeOperation='source-atop';g.fillStyle=sh;g.fillRect(0,0,W,H);g.restore();
+    // thin piece: a tight, fairly crisp shadow on the fabric
+    g.save();g.globalCompositeOperation='destination-over';
+    g.drawImage(blurOf(solidOf(art,'#000',0.42),Math.max(1.2,pxPerMm*0.35)),pxPerMm*0.18,pxPerMm*0.32);g.restore();
+    const bump=cvs(W,H);bump.getContext('2d').putImageData(new ImageData(bumpData,W,H),0,0);
+    return{color,bump,scale:W/aw,tpu:true};
+  }
   if(z.backing==='embroidered'){
     /* Satin-stitch embroidery, built pixel by pixel:
        - every stroke is domed (rounded over at its edges, flatter across wide areas), like padded embroidery;
@@ -2031,7 +2071,7 @@ function refreshArt(key){
     const t=new THREE.CanvasTexture(art);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAniso;t.minFilter=THREE.LinearMipmapLinearFilter;
     t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;z.tex=t;z.aspect=art.width/art.height;z.sizeScale=built.scale;
     let bt=null;if(built.bump){bt=new THREE.CanvasTexture(built.bump);bt.anisotropy=maxAniso;bt.wrapS=bt.wrapT=THREE.ClampToEdgeWrapping;z.bumpTex=bt;}
-    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=built.thread?0.3:bt?0.6:0;m.roughness=built.thread?0.6:bt?0.36:0.8;m.needsUpdate=true;}
+    for(const {d} of DECALS[key]){const m=d.mesh.material;m.map=t;m.bumpMap=bt;m.bumpScale=built.thread?0.3:built.tpu?0.45:bt?0.6:0;m.roughness=built.thread?0.6:built.tpu?0.3:bt?0.36:0.8;m.needsUpdate=true;}
     if(key==='under'&&z.autoFit){applyFit(z.fit);z.autoFit=false;syncZoneUI('under');}
     if(key==='inside'&&z.autoFit){applyInsideFit(z.fit);z.autoFit=false;syncZoneUI('inside');}
     updateUV(key);
@@ -2160,7 +2200,7 @@ for(const key of['inTag','inside','under','backTag','back','right','left','front
     <p class="fitnote" id="inside-fitnote"></p></div>`:''}
   ${groupOf(key)?`<div class="group"><span class="label">Editing</span><div class="inline"><div class="seg">${SUBS[groupOf(key)].map(k=>`<button data-sub="${k}" aria-pressed="${k===key}">${SUB_LABELS[k]}</button>`).join('')}</div>
     ${key==='left'||key==='right'?`<button class="btn quiet" data-act="copyside">Copy to ${key==='left'?'right':'left'} side</button>`:''}</div></div>`:''}
-  <div class="group"><span class="label">Finish</span><div class="seg wrap" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">Print</button><button data-v="patch">Square patch</button><button data-v="circle">Circle patch</button><button data-v="embroidered">Embroidered</button></div>
+  <div class="group"><span class="label">Finish</span><div class="seg wrap" id="${key}-backing">${z.tag?'<button data-v="tag">Tag</button>':''}<button data-v="none">Print</button><button data-v="patch">Square patch</button><button data-v="circle">Circle patch</button><button data-v="embroidered">Embroidered</button><button data-v="tpu">TPU</button></div>
     <div class="inline" id="${key}-bcolorwrap" style="margin-top:10px"><label class="check" style="margin:0"><input type="color" id="${key}-bcolor" aria-label="Patch color"> Patch color</label></div>
     <div class="slider" id="${key}-fillwrap"><label for="${key}-fill">Artwork fill</label><output id="${key}-fill-out"></output>
       <input type="range" id="${key}-fill" data-zone="${key}" data-prop="fill" min="30" max="100" step="1"></div>
@@ -2183,7 +2223,7 @@ function syncZoneUI(key){
     const dot=$(`#${key}-bgdot`);dot.style.background=z.bgColor||'transparent';dot.style.display=z.bgColor?'inline-block':'none';
     $(`#${key}-bgnote`).textContent=z.bgOn?(z.bgColor?'Removed the solid background color shown. Raise the tolerance if traces remain; lower it if parts of your design disappear.':'No solid background found to remove at this tolerance. Try raising it.'):'Turn this on to remove a solid-color background from your image.';}}
   {const FD={tag:0.86,patch:0.88,circle:0.96},f=z.fill||FD[z.backing]||0.88,fi=$(`#${key}-fill`);
-   const flat=z.backing==='none'||z.backing==='embroidered';$(`#${key}-fillwrap`).hidden=flat;$(`#${key}-bcolorwrap`).hidden=flat;fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
+   const flat=z.backing==='none'||z.backing==='embroidered'||z.backing==='tpu';$(`#${key}-fillwrap`).hidden=flat;$(`#${key}-bcolorwrap`).hidden=flat;fi.value=Math.round(f*100);$(`#${key}-fill-out`).textContent=Math.round(f*100)+'%';}
   $(`#${key}-text`).value=z.text;$(`#${key}-font`).value=z.font;$(`#${key}-tcolor`).value=z.textColor;$(`#${key}-bcolor`).value=z.backingColor;
   $$(`#${key}-backing button`).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.backing)));
   if(key==='under'){$$('#under-fit button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===z.fit)));$('#under-fitnote').textContent=FIT_NOTES[z.fit];}
@@ -2227,7 +2267,7 @@ panels.addEventListener('input',e=>{
     clearTimeout(z._bgT);z._bgT=setTimeout(()=>prepareImage(key,false),t.type==='range'?120:0);return;}
   if(t.type==='range'&&t.dataset.prop==='fill'){z.fill=parseFloat(t.value)/100;$(`#${t.id}-out`).textContent=Math.round(t.value)+'%';cancelAnimationFrame(t._raf);t._raf=requestAnimationFrame(()=>refreshArt(key));}
   else if(t.type==='range'){z[t.dataset.prop]=parseFloat(t.value);$(`#${t.id}-out`).textContent=fmt(t.dataset.prop,t.value);updateUV(key);
-    if(t.dataset.prop==='size'&&z.backing==='embroidered'){clearTimeout(z._embT);z._embT=setTimeout(()=>refreshArt(key),250);}}
+    if(t.dataset.prop==='size'&&(z.backing==='embroidered'||z.backing==='tpu')){clearTimeout(z._embT);z._embT=setTimeout(()=>refreshArt(key),250);}}
   else if(t.id===`${key}-text`){z.text=t.value;clearTimeout(textTimer);textTimer=setTimeout(()=>{
       if(z.text.trim()){if(key==='under'&&z.source!=='text'){z.fit='free';z.size=10;z.h=-XC;z.v=0;z.rot=0;syncZoneUI(key);}if(key==='inside'&&z.source!=='text'){z.fit='free';z.size=6;z.h=0;z.v=5;z.rot=0;syncZoneUI(key);}z.source='text';}
       else if(z.source==='text')z.source=z.image?'image':null;
@@ -2491,7 +2531,7 @@ function colorSpecRows(){
   if(!BUCKET&&!FITTED){add('Closure',CLOSURES[CLOSURE]+': '+CLOSURE_PART().toLowerCase(),colors.strap);if(HAS_HW)add('Closure','Hardware',eff('hardware'));add('Closure','Binding tape',eff('binding'));}
   add('Inside','Lining',eff('lining'));add('Inside','Seam tape',eff('tape'));add('Inside','Sweatband',eff('sweat'));
   if((tapeText.text||'').trim())add('Inside','Tape text',tapeText.color);
-  for(const k of ZONE_KEYS){const z=ZONES[k];if(!z.tex)continue;const where=z.title||k;
+  for(const k of ZONE_KEYS){const z=ZONES[k];if(!z.tex)continue;const where=(z.title||k)+({embroidered:' (embroidered)',tpu:' (TPU)'}[z.backing]||'');
     if(['patch','circle','tag'].includes(z.backing))add('Artwork',where+': '+(z.backing==='tag'?'tag':'patch')+' color',z.backingColor);
     if(z.source==='text'&&z.text.trim())add('Artwork',where+': text',z.textColor);
     else{const art=buildArt(k,'art')||buildArt(k);if(art)artPalette(art,5).filter(c=>c.share>0.04).forEach((c,i)=>add('Artwork',where+': color '+(i+1)+' ('+Math.round(c.share*100)+'%)',c.hex));}
@@ -2743,7 +2783,7 @@ function sheetCutList(sh){
     t+=`  ${''.padEnd(18)} ${p.material}${p.note?'. '+p.note:''}${p.strain!=null?'. Fit: '+q(p.strain):''}\n`;}
   t+=`\nMEASUREMENTS\n  Crown base, around the head (excluding the back opening): ${r(sh.base)} cm\n  Sweatband length to cut: ${r(sh.sbL)} cm\n`;
   if(ropeOn&&!BUCKET){let L=0,prev=null;const lim=THB*0.93;for(let i=0;i<=80;i++){const p=brimFlat(-lim+2*lim*i/80,0.04);if(prev)L+=Math.hypot(p[0]-prev[0],p[1]-prev[1]);prev=p;}t+=`  Rope length, end to end along the brim: ${r(L)} cm\n`;}
-  const z=ZONES.front;if(z&&z.tex)t+=`  Front art: ${r(z.size*(z.sizeScale||1))} cm wide, centered ${r(z.h)} cm from center and ${r(z.v)} cm above the crown's bottom edge${z.onBrim?', continuing onto the brim':''}\n`;
+  const z=ZONES.front;if(z&&z.tex)t+=`  Front art${{embroidered:' (embroidered)',tpu:' (TPU heat transfer, pressed on after the panels are sewn)',patch:' (patch)',circle:' (circle patch)'}[z.backing]||''}: ${r(z.size*(z.sizeScale||1))} cm wide, centered ${r(z.h)} cm from center and ${r(z.v)} cm above the crown's bottom edge${z.onBrim?', continuing onto the brim':''}\n`;
   t+=`\nNOTES\n  Patterns come from the 3D model, flattened so each piece keeps the lengths it has on the hat. They are a\n  starting point: make a sample, check fit and seam lengths, and adjust before cutting production fabric.\n  Left and right are the wearer's. Pieces are drawn outside face up.\n  Files: cap-patterns.dxf (mm, layers CUT, SEW, GRAIN, ART, LABEL), cap-patterns.svg (real size), cap-patterns-preview.png.\n  Printed layout: cap-patterns-printed.png (real size, ${sh.dpi||150} DPI) and cap-patterns-printed.svg show every piece\n  in its colors with the artwork placed where it sits on the hat. Color runs ${SEAM_ALLOW} cm past the sewing line\n  into the seam allowance as bleed. Screen colors are a guide: match production to the color codes.\n`;
   return t;
 }
@@ -5178,7 +5218,11 @@ Promise.race([Promise.all(['sans','script','serif'].map(loadFont)),new Promise(r
 });
 })();
 </script>
+<script>
+/* Register the service worker so Cap studio can be installed and opened offline (needs https or localhost). */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
+</script>
 </body>
 </html>
-
-</body></html>

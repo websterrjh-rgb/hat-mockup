@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cap studio: 3D hat mockups</title>
+<meta name="theme-color" content="#1E6B4A">
+<meta name="description" content="Design custom hats in 3D and export images and 360° video.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cap studio">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Playfair+Display:wght@700&family=Yellowtail&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -345,6 +354,7 @@ body.viewer #stitchBtn{display:none}
       <button class="btn" id="stitchBtn" title="Check whether the art on the hat can be embroidered, and simplify it">Stitch<span class="lbl"> check</span></button>
       <button class="btn" id="designsBtn">Designs</button>
       <button class="btn" id="installBtn" hidden title="Install Cap studio as an app">Install app</button>
+      <button class="btn" id="patternBtn" title="Download flat sewing patterns for every panel (DXF, SVG, PNG) and a cut list">Patterns</button>
       <button class="btn" id="videoBtn" title="Save a 360° video of the hat, including a pass underneath, as an MP4">360° video</button>
       <button class="btn primary" id="saveBtn" title="Save the hat from eight angles as PNG images, plus labeled color callout sheets, a to-scale dimension sheet, and color and size specs">Save PNGs</button>
     </div>
@@ -2418,7 +2428,7 @@ let toastTimer=0;function toast(msg){const dd=document.getElementById('designsDl
 /* export */
 let downloads=null,hasHost=!!(window.claude&&typeof window.claude.use==='function');
 const saveBtn=$('#saveBtn');
-if(hasHost){const vb=$('#videoBtn');saveBtn.disabled=true;vb.disabled=true;const tb=$('#templateBtn');if(tb)tb.disabled=true;window.claude.use('downloads').then(d=>{downloads=d;if(d){saveBtn.disabled=false;vb.disabled=false;if(tb)tb.disabled=false;}else{saveBtn.hidden=true;vb.hidden=true;if(tb)tb.hidden=true;}}).catch(()=>{saveBtn.hidden=true;vb.hidden=true;if(tb)tb.hidden=true;});}
+if(hasHost){const vb=$('#videoBtn'),pb=$('#patternBtn');saveBtn.disabled=true;vb.disabled=true;pb.disabled=true;const tb=$('#templateBtn');if(tb)tb.disabled=true;window.claude.use('downloads').then(d=>{downloads=d;if(d){saveBtn.disabled=false;vb.disabled=false;pb.disabled=false;if(tb)tb.disabled=false;}else{saveBtn.hidden=true;vb.hidden=true;pb.hidden=true;if(tb)tb.hidden=true;}}).catch(()=>{saveBtn.hidden=true;vb.hidden=true;pb.hidden=true;if(tb)tb.hidden=true;});}
 // Minimal zip writer (stored, no compression) so all angles download in one file
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
 function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRC_T[(c^u[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
@@ -2506,6 +2516,254 @@ const SHOTS=[['01-front','front'],['02-front-left','quarter'],['03-left-side','l
   ['05-right-side','right'],['06-front-right','quarterRight'],['07-underbrim','under'],['08-inside','insideFront']];
 VIEWS.quarterRight={yaw:-0.78,pitch:0.2,dist:42,target:[0,3.6,3.5]};
 function dataURLBytes(u){const b=atob(u.split(',')[1]),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+/* ---------- flat sewing patterns: DXF, SVG, PNG preview and a cut list ----------
+   Each crown panel is meshed on the 3D surface, then flattened by relaxing the mesh in 2D so every
+   edge keeps its 3D length (the way fabric lies flat). Patterns are in centimeters internally and
+   exported in millimeters at real size, with a sewing line and a cutting line (seam allowance). */
+const SEAM_ALLOW=1.0; // cm, about 3/8 in
+function uniqSorted(a){a=a.slice().sort((x,y)=>x-y);const o=[];for(const v of a)if(!o.length||Math.abs(v-o[o.length-1])>1e-6)o.push(v);return o;}
+function thetaSamples(t0,t1,n,extra=[]){const a=[];for(let i=0;i<=n;i++)a.push(t0+(t1-t0)*i/n);for(const e of extra)if(e>t0+1e-4&&e<t1-1e-4)a.push(e);return uniqSorted(a);}
+function relax2D(P3,W,NJ,X,Y,iters){
+  const E=[],d3=(a,b)=>Math.hypot(P3[a][0]-P3[b][0],P3[a][1]-P3[b][1],P3[a][2]-P3[b][2]),NI=W-1;
+  for(let j=0;j<=NJ;j++)for(let i=0;i<=NI;i++){const k=j*W+i;
+    if(i<NI)E.push(k,k+1,d3(k,k+1));if(j<NJ)E.push(k,k+W,d3(k,k+W));
+    if(i<NI&&j<NJ){E.push(k,k+W+1,d3(k,k+W+1));E.push(k+1,k+W,d3(k+1,k+W));}}
+  for(let it=0;it<iters;it++)for(let e=0;e<E.length;e+=3){const a=E[e],b=E[e+1],L=E[e+2];
+    const dx=X[b]-X[a],dy=Y[b]-Y[a],c=Math.hypot(dx,dy);if(c<1e-9)continue;const f=(c-L)/c*0.5;X[a]+=dx*f;Y[a]+=dy*f;X[b]-=dx*f;Y[b]-=dy*f;}
+  // how far the flat piece is from the 3D lengths (a measure of fabric strain)
+  let err=0,tot=0;for(let e=0;e<E.length;e+=3){const a=E[e],b=E[e+1],L=E[e+2];err+=Math.abs(Math.hypot(X[b]-X[a],Y[b]-Y[a])-L);tot+=L;}
+  return tot?err/tot:0;
+}
+// Flatten a crown region: thetas across, and for each theta a lower and upper height parameter.
+function flattenCrownPanel(thS,lo,hi,NJ=40){
+  const W=thS.length,P3=[];
+  for(let j=0;j<=NJ;j++){const r=j/NJ;for(const th of thS){const a0=lo(th),a1=hi(th);P3.push(crownPoint(th,a0+(a1-a0)*r));}}
+  return flattenGrid(P3,W,NJ);
+}
+function flattenGrid(P3,W,NJ){
+  const N=P3.length,X=new Float64Array(N),Y=new Float64Array(N),d=(a,b)=>Math.hypot(P3[a][0]-P3[b][0],P3[a][1]-P3[b][1],P3[a][2]-P3[b][2]);
+  const ci=Math.floor((W-1)/2);
+  // starting layout: height along the center column, width along each row from the center
+  let v=0;for(let j=0;j<=NJ;j++){const k=j*W+ci;if(j)v+=d(k-W,k);Y[k]=v;X[k]=0;
+    let u=0;for(let i=ci+1;i<W;i++){u+=d(j*W+i-1,j*W+i);X[j*W+i]=u;Y[j*W+i]=v;}
+    u=0;for(let i=ci-1;i>=0;i--){u+=d(j*W+i+1,j*W+i);X[j*W+i]=-u;Y[j*W+i]=v;}}
+  const strain=relax2D(P3,W,NJ,X,Y,500);
+  // stand the piece upright: bottom center to top center points up
+  const b=ci,t=NJ*W+ci;let ang=Math.atan2(X[t]-X[b],Y[t]-Y[b]);
+  if(Math.hypot(X[t]-X[b],Y[t]-Y[b])<0.5){ // top collapses to a point near the bottom: use the bottom edge as the horizontal
+    ang=Math.atan2(Y[W-1]-Y[0],X[W-1]-X[0]);ang=-ang;const c=Math.cos(ang),s=Math.sin(ang);
+    for(let k=0;k<N;k++){const x=X[k]-X[b],y=Y[k]-Y[b];X[k]=x*c-y*s;Y[k]=x*s+y*c;}
+  }else{const c=Math.cos(ang),s=Math.sin(ang);for(let k=0;k<N;k++){const x=X[k]-X[b],y=Y[k]-Y[b];X[k]=x*c-y*s;Y[k]=x*s+y*c;}}
+  const out=[],push=(k)=>{const p=[X[k],Y[k]];const q=out[out.length-1];if(!q||Math.hypot(p[0]-q[0],p[1]-q[1])>0.03)out.push(p);};
+  for(let i=0;i<W;i++)push(i);for(let j=1;j<=NJ;j++)push(j*W+W-1);
+  for(let i=W-2;i>=0;i--)push(NJ*W+i);for(let j=NJ-1;j>=1;j--)push(j*W);
+  if(out.length>2&&Math.hypot(out[0][0]-out[out.length-1][0],out[0][1]-out[out.length-1][1])<0.03)out.pop();
+  return{outline:out,P3,X,Y,W,NJ,strain};
+}
+function mirrorFlat(f){const X=Float64Array.from(f.X,v=>-v),P3=f.P3.map(p=>[-p[0],p[1],p[2]]);
+  return{outline:f.outline.map(p=>[-p[0],p[1]]).reverse(),P3,X,Y:f.Y,W:f.W,NJ:f.NJ,strain:f.strain};}
+// Tidy an outline before it is offset: drop tiny segments and needle-thin spikes left by the mesh
+function cleanPoly(p,minSeg=0.12){let a=p.slice(),changed=true,guard=0;
+  while(changed&&guard++<20){changed=false;
+    const o=[];for(const q of a){const r=o.length?o[o.length-1]:null;if(r&&Math.hypot(q[0]-r[0],q[1]-r[1])<minSeg){changed=true;continue;}o.push(q);}
+    if(o.length>3&&Math.hypot(o[0][0]-o[o.length-1][0],o[0][1]-o[o.length-1][1])<minSeg){o.pop();changed=true;}a=o;
+    for(let i=0;i<a.length&&a.length>3;i++){const p0=a[(i-1+a.length)%a.length],p1=a[i],p2=a[(i+1)%a.length];
+      const e1=[p1[0]-p0[0],p1[1]-p0[1]],e2=[p2[0]-p1[0],p2[1]-p1[1]],l=Math.hypot(...e1)*Math.hypot(...e2)||1;
+      if((e1[0]*e2[0]+e1[1]*e2[1])/l<-0.8){a.splice(i,1);i--;changed=true;}}}
+  return a;}
+function polyArea(p){let a=0;for(let i=0;i<p.length;i++){const q=p[(i+1)%p.length];a+=p[i][0]*q[1]-q[0]*p[i][1];}return a/2;}
+function offsetPoly(pts,d){
+  const n=pts.length,s=polyArea(pts)>0?1:-1,out=[];
+  for(let i=0;i<n;i++){const p0=pts[(i-1+n)%n],p=pts[i],p1=pts[(i+1)%n];
+    let e1=[p[0]-p0[0],p[1]-p0[1]],e2=[p1[0]-p[0],p1[1]-p[1]];const l1=Math.hypot(...e1)||1,l2=Math.hypot(...e2)||1;e1=[e1[0]/l1,e1[1]/l1];e2=[e2[0]/l2,e2[1]/l2];
+    const n1=[e1[1]*s,-e1[0]*s],n2=[e2[1]*s,-e2[0]*s];let m=[n1[0]+n2[0],n1[1]+n2[1]];const ml=Math.hypot(...m);
+    m=ml<1e-6?n1:[m[0]/ml,m[1]/ml];const cs=m[0]*n1[0]+m[1]*n1[1];
+    const turn=(e1[0]*e2[1]-e1[1]*e2[0])*s; // >0: convex corner (turning the same way as the outline)
+    if(cs<0.75&&turn>0){out.push([p[0]+n1[0]*d,p[1]+n1[1]*d],[p[0]+m[0]*d,p[1]+m[1]*d],[p[0]+n2[0]*d,p[1]+n2[1]*d]);} // round off sharp outside corners
+    else{const k=d/Math.max(turn>0?0.5:0.25,cs);out.push([p[0]+m[0]*k,p[1]+m[1]*k]);}}
+  return out;
+}
+function polyBBox(p){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const q of p){x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1]);}return{x0,y0,x1,y1,w:x1-x0,h:y1-y0};}
+function polyLen(p,closed=true){let L=0;for(let i=0;i<p.length-(closed?0:1);i++){const q=p[(i+1)%p.length];L+=Math.hypot(q[0]-p[i][0],q[1]-p[i][1]);}return L;}
+// Where the front artwork lands on a flattened piece (dashed outline for the decorator).
+function artOnPiece(flat){
+  const z=ZONES.front;if(!z||!z.tex||!z.aspect)return null;
+  const Wd=z.size*(z.sizeScale||1),Hd=Wd/z.aspect,r=-(z.rot||0)*Math.PI/180,cr=Math.cos(r),sr=Math.sin(r);
+  const ring=[];const S=24;
+  for(const [ax,ay,bx,by] of[[-1,-1,1,-1],[1,-1,1,1],[1,1,-1,1],[-1,1,-1,-1]])for(let k=0;k<S;k++){const t=k/S,rx=(ax+(bx-ax)*t)*Wd/2,ry=(ay+(by-ay)*t)*Hd/2;ring.push([z.h+rx*cr-ry*sr,z.v+rx*sr+ry*cr]);}
+  const segs=[];let cur=[];
+  for(const [x,y] of ring){let best=-1,bd=1e9;
+    for(let k=0;k<flat.P3.length;k++){const p=flat.P3[k];if(p[2]<0.5)continue;const dd=(p[0]-x)**2+(p[1]-y)**2;if(dd<bd){bd=dd;best=k;}}
+    if(best>=0&&bd<0.36)cur.push([flat.X[best],flat.Y[best]]);else{if(cur.length>1)segs.push(cur);cur=[];}}
+  if(cur.length>1)segs.push(cur);
+  if(segs.length>1){const f=segs[0],l=segs[segs.length-1];const a=f[0],b=l[l.length-1];if(Math.hypot(a[0]-b[0],a[1]-b[1])<1.2){segs[0]=l.concat(f);segs.pop();}}
+  return segs.length?{segs,w:Wd,h:Hd,closed:segs.length===1&&cur.length===ring.length}:null;
+}
+function patternPieces(){
+  const keepGroove=SKIP_GROOVE;SKIP_GROOVE=true;
+  const P=[],S0=SEAM_TH[0],S1=SEAM_TH[1],PI=Math.PI;
+  const backLo=th=>{const d=PI-Math.abs(th);return OPEN_W>0&&d<OPEN_W?openA(d):0;};
+  const one=()=>1,zero=()=>0;
+  const col=k=>eff(k);
+  const crown=(name,key,t0,t1,lo,hi,opts={})=>{
+    const extra=[];if(OPEN_W>0)for(const s of[1,-1])extra.push(s*(PI-OPEN_W));
+    for(const e of(opts.extra||[]))extra.push(e);
+    // the crown is symmetric, so a right-hand piece is the mirror image of its left-hand twin
+    const mirrorOf=opts.mirrorOf&&P.find(q=>q.name===opts.mirrorOf);
+    const f=mirrorOf?mirrorFlat(mirrorOf.flat):flattenCrownPanel(thetaSamples(t0,t1,opts.n||36,extra),lo,hi);
+    P.push({name,qty:1,color:col(key),colorKey:key,outline:f.outline,flat:f,front:!!opts.front,
+      material:(TRUCK&&MESH_PANELS.includes(key))?'Mesh':(perforated&&opts.perf)?'Main fabric, laser perforated':'Main fabric',strain:f.strain});
+  };
+  if(BUCKET){
+    crown('Left side band','p_lside',0,PI,zero,()=>BUCKET_TOP,{front:true,perf:true});
+    crown('Right side band','p_rside',-PI,0,zero,()=>BUCKET_TOP,{front:true,perf:true,mirrorOf:'Left side band'});
+    const top=[];for(let i=0;i<120;i++){const th=-PI+TAU*i/120,p=crownPoint(th,BUCKET_TOP);top.push([p[0],-p[2]]);}
+    P.push({name:'Top',qty:1,color:col('p_top'),colorKey:'p_top',outline:top,material:'Main fabric'});
+  }else if(CAMP){
+    // lower edge of each crown panel: under the front arch, over the side panel, then down the back.
+    // The drop behind the side panel is eased over a few millimeters so the mesh stays well shaped.
+    const RAMP=0.035;
+    const lo=th=>{const t=Math.abs(th);if(t<CAMP_F)return campArch(th);if(t<CAMP_BK)return campSideTop(th);
+      if(t<CAMP_BK+RAMP){const k=(t-CAMP_BK)/RAMP;return campSideTop(CAMP_BK)*(1-k)+backLo(th)*k;}return backLo(th);};
+    crown('Front','p_front',-CAMP_F,CAMP_F,zero,th=>campArch(th),{front:true});
+    crown('Left side','p_lside',CAMP_F,CAMP_BK,zero,th=>campSideTop(th));
+    crown('Right side','p_rside',-CAMP_BK,-CAMP_F,zero,th=>campSideTop(th),{mirrorOf:'Left side'});
+    crown('Left crown','p_ltop',0,PI,lo,one,{n:56,extra:[CAMP_F,CAMP_BK,CAMP_BK+RAMP/2,CAMP_BK+RAMP]});
+    crown('Right crown','p_rtop',-PI,0,lo,one,{mirrorOf:'Left crown'});
+  }else{
+    if(TRUCK||DAD){crown('Front left','p_lfront',0,S0,zero,one,{front:true});crown('Front right','p_rfront',-S0,0,zero,one,{front:true,mirrorOf:'Front left'});}
+    else if(SIX){crown('Front','p_front',-S0,S0,zero,th=>sixArch(th),{front:true});crown('Top front','p_top',-S0,S0,th=>sixArch(th),one);}
+    else crown('Front','p_front',-S0,S0,zero,one,{front:true});
+    crown('Left side','p_lside',S0,S1,zero,one,{perf:true});crown('Right side','p_rside',-S1,-S0,zero,one,{perf:true,mirrorOf:'Left side'});
+    crown('Left back','p_lback',S1,PI,backLo,one,{perf:true});crown('Right back','p_rback',-PI,-S1,backLo,one,{perf:true,mirrorOf:'Left back'});
+  }
+  // brim
+  if(BUCKET){
+    for(const [nm,c,mat] of[['Brim top, half','brim','Main fabric'],['Underbrim, half','under','Main fabric']]){
+      const thS=thetaSamples(0,PI,48),NJ=12,P3=[];for(let j=0;j<=NJ;j++)for(const th of thS)P3.push(brimPoint(th,j/NJ));
+      const f=flattenGrid(P3,thS.length,NJ);
+      P.push({name:nm,qty:2,color:colors[c],outline:f.outline,material:mat,strain:f.strain,note:'Cut 2. Seams at center front and center back.'});}
+  }else{
+    const out=[];for(let i=0;i<=NB;i++){const p=brimFlat(-THB+2*THB*i/NB,1);out.push([p[0],-p[1]]);}
+    for(let i=NB;i>=0;i--){const p=brimFlat(-THB+2*THB*i/NB,0);out.push([p[0],-p[1]]);}
+    P.push({name:'Brim top',qty:1,color:colors.brim,outline:out,material:'Main fabric'});
+    P.push({name:'Underbrim',qty:1,color:colors.under,outline:out,material:'Main fabric or underbrim fabric'});
+    P.push({name:'Brim insert',qty:1,color:null,outline:out,material:'Plastic brim board, cut to the finished bill size (no seam allowance)',net:true});
+  }
+  // sweatband (a straight strip)
+  let base=0,prev=null;const lim=PI-(OPEN_W||0);
+  for(let i=0;i<=200;i++){const th=-lim+2*lim*i/200,p=crownPoint(th,0);if(prev)base+=Math.hypot(p[0]-prev[0],p[2]-prev[2]);prev=p;}
+  const sbL=base+(OPEN_W>0?2:1.5);
+  P.push({name:'Sweatband',qty:1,color:eff('sweat'),outline:[[0,0],[sbL,0],[sbL,3],[0,3]],material:'Sweatband tape, finished width 3 cm',net:true,strip:true});
+  SKIP_GROOVE=keepGroove;
+  for(const p of P){if(!p.strip)p.outline=cleanPoly(p.outline);p.cut=p.net?p.outline:offsetPoly(p.outline,SEAM_ALLOW);p.bb=polyBBox(p.cut);p.netBB=polyBBox(p.outline);
+    if(p.front&&p.flat)p.art=artOnPiece(p.flat);}
+  return{pieces:P,base,sbL};
+}
+// Lay the pieces out on one sheet and turn them into drawing primitives (cm, y up).
+function patternSheet(){
+  const {pieces,base,sbL}=patternPieces(),gap=3,maxW=Math.max(95,...pieces.map(p=>p.bb.w+2*gap));
+  let x=gap,y=gap,rowH=0;const prims=[],rows=[];
+  const sorted=pieces.slice().sort((a,b)=>b.bb.h-a.bb.h);
+  // shelf packing, rows grow upward in the drawing
+  const placed=[];for(const p of sorted){if(x+p.bb.w+gap>maxW&&x>gap){y+=rowH+gap+4;x=gap;rowH=0;}placed.push({p,ox:x-p.bb.x0,oy:y-p.bb.y0});x+=p.bb.w+gap;rowH=Math.max(rowH,p.bb.h);}
+  const H=y+rowH+gap+8,Wd=maxW;
+  for(const {p,ox,oy} of placed){
+    const T=q=>[q[0]+ox,q[1]+oy];
+    prims.push({t:'poly',layer:'CUT',pts:p.cut.map(T),closed:true,fill:p.color});
+    if(!p.net)prims.push({t:'poly',layer:'SEW',pts:p.outline.map(T),closed:true});
+    const bb=polyBBox(p.outline),cx=(bb.x0+bb.x1)/2+ox,cy0=bb.y0+oy,hgt=bb.h;
+    if(!p.strip){const g0=cy0+hgt*0.46,g1=cy0+hgt*0.8;prims.push({t:'line',layer:'GRAIN',a:[cx,g0],b:[cx,g1]});
+      for(const [yy,dir] of[[g0,1],[g1,-1]])prims.push({t:'line',layer:'GRAIN',a:[cx,yy],b:[cx-0.6,yy+0.9*dir]},{t:'line',layer:'GRAIN',a:[cx,yy],b:[cx+0.6,yy+0.9*dir]});}
+    if(p.art)for(const s of p.art.segs)prims.push({t:'poly',layer:'ART',pts:s.map(T),closed:false});
+    const pm=p.color?nearestPantone(p.color):null,lines=[p.name.toUpperCase(),(p.qty>1?'Cut '+p.qty:'Cut 1')+(p.net?', net size':', outside face up'),
+      p.color?p.color.toUpperCase()+'  '+pm.name:'',p.material];
+    if(p.art)lines.push('Front art '+p.art.w.toFixed(1)+' x '+p.art.h.toFixed(1)+' cm (dashed)');
+    const th=p.strip?0.45:Math.min(0.7,Math.max(0.42,bb.w/22)),ty=p.strip?cy0+hgt+0.9:cy0+hgt*0.4;
+    lines.filter(Boolean).forEach((l,i)=>prims.push({t:'text',layer:'LABEL',x:p.strip?bb.x0+ox:cx,y:ty-i*th*1.45,h:th,s:l,anchor:p.strip?'start':'middle'}));
+  }
+  // title block and a 10 cm check square
+  const styleName={camp:'Camp cap',trucker:'Trucker',sixpanel:'6-panel',dad:'Dad hat',bucket:'Bucket hat'}[STYLE]||'5-panel';
+  const name=(typeof $==='function'&&$('#designName')&&$('#designName').value.trim())||'Untitled design';
+  prims.push({t:'text',layer:'LABEL',x:gap,y:H-2.2,h:1.0,s:'CAP STUDIO FLAT PATTERNS: '+name.replace(/[^\x20-\x7E]/g,'')+' ('+styleName+')',anchor:'start'});
+  prims.push({t:'text',layer:'LABEL',x:gap,y:H-3.8,h:0.5,s:'Real size. Solid line = cut line, dashed line = sewing line ('+SEAM_ALLOW+' cm seam allowance). Arrows = grain line. Print at 100% and check the 10 cm square.',anchor:'start'});
+  const sq=[[Wd-gap-10,H-6],[Wd-gap,H-6],[Wd-gap,H-16],[Wd-gap-10,H-16]];
+  prims.push({t:'poly',layer:'LABEL',pts:sq,closed:true},{t:'text',layer:'LABEL',x:Wd-gap-5,y:H-11.2,h:0.6,s:'10 cm',anchor:'middle'});
+  return{prims,W:Wd,H,pieces,base,sbL,styleName,name};
+}
+function sheetToDXF(sh){
+  const L=[],f=v=>(Math.round(v*10000)/1000).toFixed(3); // cm to mm
+  const g=(c,v)=>{L.push(String(c));L.push(String(v));};
+  g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSUNITS');g(70,4);g(9,'$MEASUREMENT');g(70,1);g(0,'ENDSEC');
+  g(0,'SECTION');g(2,'TABLES');
+  g(0,'TABLE');g(2,'LTYPE');g(70,2);
+  g(0,'LTYPE');g(2,'CONTINUOUS');g(70,0);g(3,'Solid line');g(72,65);g(73,0);g(40,0.0);
+  g(0,'LTYPE');g(2,'DASHED');g(70,0);g(3,'__ __ __');g(72,65);g(73,2);g(40,6.0);g(49,4.0);g(49,-2.0);
+  g(0,'ENDTAB');
+  const layers=[['CUT',7,'CONTINUOUS'],['SEW',1,'DASHED'],['GRAIN',3,'CONTINUOUS'],['ART',5,'DASHED'],['LABEL',8,'CONTINUOUS']];
+  g(0,'TABLE');g(2,'LAYER');g(70,layers.length);
+  for(const [n,c,lt] of layers){g(0,'LAYER');g(2,n);g(70,0);g(62,c);g(6,lt);}
+  g(0,'ENDTAB');g(0,'ENDSEC');
+  g(0,'SECTION');g(2,'ENTITIES');
+  for(const p of sh.prims){
+    if(p.t==='poly'){g(0,'POLYLINE');g(8,p.layer);g(66,1);g(10,'0.0');g(20,'0.0');g(30,'0.0');g(70,p.closed?1:0);
+      for(const q of p.pts){g(0,'VERTEX');g(8,p.layer);g(10,f(q[0]));g(20,f(q[1]));g(30,'0.0');}g(0,'SEQEND');g(8,p.layer);}
+    else if(p.t==='line'){g(0,'LINE');g(8,p.layer);g(10,f(p.a[0]));g(20,f(p.a[1]));g(30,'0.0');g(11,f(p.b[0]));g(21,f(p.b[1]));g(31,'0.0');}
+    else if(p.t==='text'){const mid=p.anchor==='middle';g(0,'TEXT');g(8,p.layer);g(10,f(p.x));g(20,f(p.y));g(30,'0.0');g(40,f(p.h));g(1,p.s.replace(/[^\x20-\x7E]/g,''));
+      if(mid){g(72,1);g(11,f(p.x));g(21,f(p.y));g(31,'0.0');}}
+  }
+  g(0,'ENDSEC');g(0,'EOF');
+  return L.join('\r\n')+'\r\n';
+}
+function sheetToSVG(sh){
+  const mm=v=>(v*10).toFixed(2),Y=v=>((sh.H-v)*10).toFixed(2),esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const st={CUT:'stroke="#111" stroke-width="0.5"',SEW:'stroke="#C0392B" stroke-width="0.35" stroke-dasharray="4 2"',GRAIN:'stroke="#2E7D32" stroke-width="0.4"',ART:'stroke="#1565C0" stroke-width="0.45" stroke-dasharray="3 2"',LABEL:'stroke="#555" stroke-width="0.3"'};
+  let o=`<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${mm(sh.W)}mm" height="${mm(sh.H)}mm" viewBox="0 0 ${mm(sh.W)} ${mm(sh.H)}">\n<rect width="100%" height="100%" fill="#fff"/>\n`;
+  for(const p of sh.prims){
+    if(p.t==='poly')o+=`<path d="M${p.pts.map(q=>mm(q[0])+' '+Y(q[1])).join(' L')}${p.closed?' Z':''}" fill="${p.fill?p.fill:'none'}" fill-opacity="${p.fill?0.16:0}" ${st[p.layer]}/>\n`;
+    else if(p.t==='line')o+=`<line x1="${mm(p.a[0])}" y1="${Y(p.a[1])}" x2="${mm(p.b[0])}" y2="${Y(p.b[1])}" ${st[p.layer]}/>\n`;
+    else o+=`<text x="${mm(p.x)}" y="${Y(p.y)}" font-family="Arial, Helvetica, sans-serif" font-size="${mm(p.h)}" text-anchor="${p.anchor==='middle'?'middle':'start'}" fill="#222" stroke="#fff" stroke-width="${(p.h*2.2).toFixed(2)}" stroke-linejoin="round" paint-order="stroke">${esc(p.s)}</text>\n`;
+  }
+  return o+'</svg>\n';
+}
+function sheetCutList(sh){
+  const r=n=>n.toFixed(1),q=d=>d<0.015?'flattens cleanly':d<0.03?'needs a little easing when sewn':'needs noticeable easing, check on a sample';
+  let t=`CAP STUDIO CUT LIST\nDesign: ${sh.name}\nStyle: ${sh.styleName}\nSeam allowance: ${SEAM_ALLOW} cm on all fabric pieces (already included in the cut line)\n\nPIECES\n`;
+  for(const p of sh.pieces){const pm=p.color?nearestPantone(p.color):null;
+    t+=`  ${p.name.padEnd(18)} cut ${String(p.qty).padEnd(3)} ${p.net?'size':'sewn'} ${r(p.netBB.w)} x ${r(p.netBB.h)} cm   ${p.net?'(no allowance)':'cut '+r(p.bb.w)+' x '+r(p.bb.h)+' cm'}   ${p.color?(p.color.toUpperCase()+' / '+pm.name):'-'}\n`;
+    t+=`  ${''.padEnd(18)} ${p.material}${p.note?'. '+p.note:''}${p.strain!=null?'. Fit: '+q(p.strain):''}\n`;}
+  t+=`\nMEASUREMENTS\n  Crown base, around the head (excluding the back opening): ${r(sh.base)} cm\n  Sweatband length to cut: ${r(sh.sbL)} cm\n`;
+  if(ropeOn&&!BUCKET){let L=0,prev=null;const lim=THB*0.93;for(let i=0;i<=80;i++){const p=brimFlat(-lim+2*lim*i/80,0.04);if(prev)L+=Math.hypot(p[0]-prev[0],p[1]-prev[1]);prev=p;}t+=`  Rope length, end to end along the brim: ${r(L)} cm\n`;}
+  const z=ZONES.front;if(z&&z.tex)t+=`  Front art: ${r(z.size*(z.sizeScale||1))} cm wide, centered ${r(z.h)} cm from center and ${r(z.v)} cm above the crown's bottom edge${z.onBrim?', continuing onto the brim':''}\n`;
+  t+=`\nNOTES\n  Patterns come from the 3D model, flattened so each piece keeps the lengths it has on the hat. They are a\n  starting point: make a sample, check fit and seam lengths, and adjust before cutting production fabric.\n  Left and right are the wearer's. Pieces are drawn outside face up.\n  Files: cap-patterns.dxf (mm, layers CUT, SEW, GRAIN, ART, LABEL), cap-patterns.svg (real size), cap-patterns-preview.png.\n`;
+  return t;
+}
+function sheetPreviewPNG(sh){
+  const sc=Math.min(28,3200/sh.W),c=document.createElement('canvas');c.width=Math.round(sh.W*sc);c.height=Math.round(sh.H*sc);
+  const g=c.getContext('2d'),X=v=>v*sc,Y=v=>(sh.H-v)*sc;g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+  const st={CUT:['#111',2,[]],SEW:['#C0392B',1.4,[10,6]],GRAIN:['#2E7D32',1.6,[]],ART:['#1565C0',1.8,[8,5]],LABEL:['#555',1.2,[]]};
+  for(const p of sh.prims){
+    if(p.t==='text'){g.font=`${Math.max(9,p.h*sc)}px Archivo, Arial, sans-serif`;g.textAlign=p.anchor==='middle'?'center':'left';
+      g.lineJoin='round';g.lineWidth=Math.max(3,p.h*sc*0.22);g.strokeStyle='#fff';g.strokeText(p.s,X(p.x),Y(p.y));g.fillStyle='#222';g.fillText(p.s,X(p.x),Y(p.y));continue;}
+    const [col,w,dash]=st[p.layer];g.strokeStyle=col;g.lineWidth=w;g.setLineDash(dash);g.beginPath();
+    const pts=p.t==='line'?[p.a,p.b]:p.pts;pts.forEach((q,i)=>i?g.lineTo(X(q[0]),Y(q[1])):g.moveTo(X(q[0]),Y(q[1])));if(p.closed)g.closePath();
+    if(p.fill){g.globalAlpha=0.16;g.fillStyle=p.fill;g.fill();g.globalAlpha=1;}g.stroke();g.setLineDash([]);
+  }
+  return dataURLBytes(c.toDataURL('image/png'));
+}
+async function exportPatterns(){
+  const b=$('#patternBtn'),label=b.textContent;b.disabled=true;b.textContent='Flattening…';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const sh=patternSheet(),enc=new TextEncoder();
+    const files=[{name:'cap-patterns.dxf',data:enc.encode(sheetToDXF(sh))},{name:'cap-patterns.svg',data:enc.encode(sheetToSVG(sh))},
+      {name:'cap-patterns-preview.png',data:sheetPreviewPNG(sh)},{name:'cap-cut-list.txt',data:enc.encode(sheetCutList(sh))}];
+    saveBlob(makeZip(files),'cap-patterns.zip');
+  }catch(e){console.warn(e);toast('The patterns couldn’t be created. Try again.');}
+  finally{b.disabled=false;b.textContent=label;}
+}
+$('#patternBtn').addEventListener('click',exportPatterns);
+
 /* ---------- 360° turntable video (MP4) ----------
    Frames are rendered one by one and encoded with the browser's H.264 encoder (WebCodecs), then packed
    into an MP4 by the small writer below, so the loop is smooth and seamless regardless of computer speed.
@@ -4789,3 +5047,11 @@ Promise.race([Promise.all(['sans','script','serif'].map(loadFont)),new Promise(r
 </script>
 </body>
 </html>
+
+<script>
+/* Register the service worker so Cap studio can be installed and opened offline (needs https or localhost). */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
+</script>
+</body></html>
